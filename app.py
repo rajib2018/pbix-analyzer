@@ -1,7 +1,5 @@
-pip install pbixray
-
 import streamlit as st
-from pbixray import PBIXRay
+from pbixray.core import PBIXRay
 import pandas as pd
 import os
 import tempfile
