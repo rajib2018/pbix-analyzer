@@ -1,32 +1,32 @@
 import streamlit as st
-from pbixray.core import PBIXRay
 import pandas as pd
-import os
-import tempfile
 
-st.title("PBIX File Reader")
+# App title
+st.title("Dummy Streamlit App")
 
-uploaded_file = st.file_uploader("Upload your .pbix file", type=["pbix"])
+# Introduction text
+st.write("This is a simple dummy Streamlit app for demonstration purposes.")
 
-if uploaded_file is not None:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pbix") as tmp_file:
-        tmp_file.write(uploaded_file.getvalue())
-        tmp_file_path = tmp_file.name
+# Create a sample dataframe
+data = {
+    "Name": ["Alice", "Bob", "Charlie"],
+    "Age": [25, 30, 35],
+    "City": ["New York", "Paris", "London"]
+}
+df = pd.DataFrame(data)
 
-    try:
-        model = PBIXRay(tmp_file_path)
-        st.success("File successfully read and parsed!")
+# Display the dataframe
+st.write("Here is a sample data table:")
+st.dataframe(df)
 
-        st.header("Tables in the PBIX file:")
-        for table_name in model.tables:
-            st.subheader(f"Table: {table_name}")
-            table_data = model.get_table(table_name)
-            st.dataframe(table_data)
+# Add a simple interactive element: slider
+age_filter = st.slider("Select minimum age", min_value=0, max_value=100, value=20)
+filtered_df = df[df["Age"] >= age_filter]
 
-    except Exception as e:
-        st.error(f"An error occurred while processing the file: {e}")
+# Display filtered dataframe
+st.write("Filtered data based on age:")
+st.dataframe(filtered_df)
 
-    finally:
-        os.remove(tmp_file_path)
-else:
-    st.info("Please upload a .pbix file to see its contents.")
+# Add a button
+if st.button("Say Hello"):
+    st.write("Hello, Streamlit user!")
