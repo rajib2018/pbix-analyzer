@@ -1,4 +1,4 @@
-!pip install pbixray
+pip install pbixray
 
 import streamlit as st
 from pbixray import PBIXRay
