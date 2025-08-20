@@ -31,10 +31,10 @@ def generate_word_doc(report_data):
         if isinstance(metadata, pd.DataFrame) and not metadata.empty:
              for index, row in metadata.iterrows():
                  for col, value in row.items():
-                      document.add_paragraph(f"{col}: {value}")
+                      document.add_paragraph(f"{col}: {value if pd.notna(value) else 'N/A'}") # Handle potential NaN in DataFrame
         elif isinstance(metadata, dict):
             for key, value in metadata.items():
-                document.add_paragraph(f"{key}: {value}")
+                document.add_paragraph(f"{key}: {value if value else 'N/A'}") # Handle potential empty strings or None in dict
         else:
              document.add_paragraph("Metadata available in unexpected format.")
     else:
@@ -50,8 +50,8 @@ def generate_word_doc(report_data):
              for index, row in schema.iterrows():
                  document.add_paragraph(f"  Table: {row.get('name', 'N/A')}")
                  # Assuming DataFrame schema has 'columns' as a string representation or similar
-                 if row.get('columns'):
-                      document.add_paragraph(f"  Columns: {row['columns']}")
+                 columns_info = row.get('columns', 'N/A')
+                 document.add_paragraph(f"  Columns: {columns_info if columns_info else 'N/A'}") # Handle potential empty columns info
         elif isinstance(schema, list): # Schema is expected to be a list of dictionaries
             for table in schema:
                 document.add_heading(f"Table: {table.get('name', 'N/A')}", level=2)
@@ -71,8 +71,13 @@ def generate_word_doc(report_data):
     document.add_heading('Relationships', level=1)
     relationships = report_data.get("relationships")
     if relationships is not None and hasattr(relationships, 'empty') and not relationships.empty:
+        # Use confirmed column names based on potential debug prints
         for rel in relationships.to_dict('records'):
-            document.add_paragraph(f"From Table: {rel.get('fromTable', 'N/A')}, From Column: {rel.get('fromColumn', 'N/A')}, To Table: {rel.get('toTable', 'N/A')}, To Column: {rel.get('toColumn', 'N/A')}")
+            from_table = rel.get('From Table', rel.get('fromTable', 'N/A')) # Try common variations
+            from_column = rel.get('From Column', rel.get('fromColumn', 'N/A')) # Try common variations
+            to_table = rel.get('To Table', rel.get('toTable', 'N/A')) # Try common variations
+            to_column = rel.get('To Column', rel.get('toColumn', 'N/A')) # Try common variations
+            document.add_paragraph(f"From Table: {from_table}, From Column: {from_column}, To Table: {to_table}, To Column: {to_column}")
     else:
         document.add_paragraph("No relationships available.")
 
@@ -80,11 +85,12 @@ def generate_word_doc(report_data):
     document.add_heading('Power Query Code', level=1)
     power_query = report_data.get("power_query")
     if power_query is not None and hasattr(power_query, 'empty') and not power_query.empty:
+        # Use confirmed column names based on potential debug prints
         for pq in power_query.to_dict('records'):
-             document.add_paragraph(f"Name: {pq.get('name', 'N/A')}")
-             if pq.get('expression'):
-                  document.add_paragraph("Expression:")
-                  document.add_paragraph(pq['expression'])
+             name = pq.get('Name', pq.get('name', 'N/A')) # Try common variations
+             expression = pq.get('Expression', pq.get('expression', 'N/A')) # Try common variations
+             document.add_paragraph(f"Name: {name}")
+             document.add_paragraph(f"Expression: {expression}") # Always print expression with N/A if missing
     else:
         document.add_paragraph("No Power Query code available.")
 
@@ -92,8 +98,11 @@ def generate_word_doc(report_data):
     document.add_heading('M Parameters', level=1)
     m_parameters = report_data.get("m_parameters")
     if m_parameters is not None and hasattr(m_parameters, 'empty') and not m_parameters.empty:
+        # Use confirmed column names based on potential debug prints
         for param in m_parameters.to_dict('records'):
-            document.add_paragraph(f"Name: {param.get('name', 'N/A')}, Value: {param.get('value', 'N/A')}")
+            name = param.get('Name', param.get('name', 'N/A')) # Try common variations
+            value = param.get('Value', param.get('value', 'N/A')) # Try common variations
+            document.add_paragraph(f"Name: {name}, Value: {value}")
     else:
         document.add_paragraph("No M parameters available.")
 
@@ -101,11 +110,12 @@ def generate_word_doc(report_data):
     document.add_heading('DAX Tables', level=1)
     dax_tables = report_data.get("dax_tables")
     if dax_tables is not None and hasattr(dax_tables, 'empty') and not dax_tables.empty:
+         # Use confirmed column names based on potential debug prints
          for table in dax_tables.to_dict('records'):
-            document.add_paragraph(f"Name: {table.get('name', 'N/A')}")
-            if table.get('expression'):
-                 document.add_paragraph("Expression:")
-                 document.add_paragraph(table['expression'])
+            name = table.get('Name', table.get('name', 'N/A')) # Try common variations
+            expression = table.get('Expression', table.get('expression', 'N/A')) # Try common variations
+            document.add_paragraph(f"Name: {name}")
+            document.add_paragraph(f"Expression: {expression}") # Always print expression with N/A if missing
     else:
         document.add_paragraph("No DAX tables available.")
 
@@ -113,8 +123,11 @@ def generate_word_doc(report_data):
     document.add_heading('DAX Measures', level=1)
     dax_measures = report_data.get("dax_measures")
     if dax_measures is not None and hasattr(dax_measures, 'empty') and not dax_measures.empty:
+        # Use confirmed column names based on potential debug prints
         for measure in dax_measures.to_dict('records'):
-            document.add_paragraph(f"Name: {measure.get('name', 'N/A')}")
+            name = measure.get('Name', measure.get('name', 'N/A')) # Try common variations
+            expression = measure.get('Expression', measure.get('expression', 'N/A')) # Try common variations
+            document.add_paragraph(f"Name: {name}")
             if measure.get('expression'):
                 document.add_paragraph("Expression:")
                 document.add_paragraph(measure['expression'])
@@ -164,12 +177,12 @@ def generate_pdf_doc(report_data):
         if isinstance(metadata, pd.DataFrame) and not metadata.empty:
              for index, row in metadata.iterrows():
                  for col, value in row.items():
-                      y_position = draw_paragraph(f"{col}: {value}", 100, y_position)
+                      y_position = draw_paragraph(f"{col}: {value if pd.notna(value) else 'N/A'}", 100, y_position) # Handle potential NaN in DataFrame
         elif isinstance(metadata, dict):
             for key, value in metadata.items():
-                 y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
+                 y_position = draw_paragraph(f"{key}: {value if value else 'N/A'}", 100, y_position) # Handle potential empty strings or None in dict
         else:
-             y_position = draw_paragraph("Metadata available in unexpected format.", 100, y_position)
+            y_position = draw_paragraph("Metadata available in unexpected format.", 100, y_position)
     else:
         y_position = draw_paragraph("No metadata available.", 100, y_position)
 
@@ -182,8 +195,8 @@ def generate_pdf_doc(report_data):
              for index, row in schema.iterrows():
                  y_position = draw_paragraph(f"  Table: {row.get('name', 'N/A')}", 100, y_position)
                  # Assuming DataFrame schema has 'columns' as a string representation or similar
-                 if row.get('columns'):
-                      y_position = draw_paragraph(f"  Columns: {row['columns']}", 100, y_position)
+                 columns_info = row.get('columns', 'N/A')
+                 y_position = draw_paragraph(f"  Columns: {columns_info if columns_info else 'N/A'}", 100, y_position) # Handle potential empty columns info
         elif isinstance(schema, list): # Schema is expected to be a list of dictionaries
             for table in schema:
                 y_position = draw_text(f"Table: {table.get('name', 'N/A')}", 100, y_position, size=12, bold=True)
@@ -203,8 +216,13 @@ def generate_pdf_doc(report_data):
     y_position = draw_text("Relationships", 100, y_position, size=14, bold=True)
     relationships = report_data.get("relationships")
     if relationships is not None and hasattr(relationships, 'empty') and not relationships.empty:
+        # Use confirmed column names based on potential debug prints
         for rel in relationships.to_dict('records'):
-            y_position = draw_paragraph(f"From Table: {rel.get('fromTable', 'N/A')}, From Column: {rel.get('fromColumn', 'N/A')}, To Table: {rel.get('toTable', 'N/A')}, To Column: {rel.get('toColumn', 'N/A')}", 100, y_position)
+            from_table = rel.get('From Table', rel.get('fromTable', 'N/A')) # Try common variations
+            from_column = rel.get('From Column', rel.get('fromColumn', 'N/A')) # Try common variations
+            to_table = rel.get('To Table', rel.get('toTable', 'N/A')) # Try common variations
+            to_column = rel.get('To Column', rel.get('toColumn', 'N/A')) # Try common variations
+            y_position = draw_paragraph(f"From Table: {from_table}, From Column: {from_column}, To Table: {to_table}, To Column: {to_column}", 100, y_position)
     else:
         y_position = draw_paragraph("No relationships available.", 100, y_position)
 
@@ -212,11 +230,12 @@ def generate_pdf_doc(report_data):
     y_position = draw_text("Power Query Code", 100, y_position, size=14, bold=True)
     power_query = report_data.get("power_query")
     if power_query is not None and hasattr(power_query, 'empty') and not power_query.empty:
+        # Use confirmed column names based on potential debug prints
         for pq in power_query.to_dict('records'):
-            y_position = draw_paragraph(f"Name: {pq.get('name', 'N/A')}", 100, y_position)
-            if pq.get('expression'):
-                y_position = draw_text("Expression:", 100, y_position, size=10)
-                y_position = draw_paragraph(pq['expression'], 100, y_position)
+            name = pq.get('Name', pq.get('name', 'N/A')) # Try common variations
+            expression = pq.get('Expression', pq.get('expression', 'N/A')) # Try common variations
+            y_position = draw_paragraph(f"Name: {name}", 100, y_position)
+            y_position = draw_paragraph(f"Expression: {expression}", 100, y_position) # Always print expression with N/A if missing
     else:
         y_position = draw_paragraph("No Power Query code available.", 100, y_position)
 
@@ -224,8 +243,11 @@ def generate_pdf_doc(report_data):
     y_position = draw_text("M Parameters", 100, y_position, size=14, bold=True)
     m_parameters = report_data.get("m_parameters")
     if m_parameters is not None and hasattr(m_parameters, 'empty') and not m_parameters.empty:
+        # Use confirmed column names based on potential debug prints
         for param in m_parameters.to_dict('records'):
-            y_position = draw_paragraph(f"Name: {param.get('name', 'N/A')}, Value: {param.get('value', 'N/A')}", 100, y_position)
+            name = param.get('Name', param.get('name', 'N/A')) # Try common variations
+            value = param.get('Value', param.get('value', 'N/A')) # Try common variations
+            y_position = draw_paragraph(f"Name: {name}, Value: {value}", 100, y_position)
     else:
         y_position = draw_paragraph("No M parameters available.", 100, y_position)
 
@@ -233,11 +255,12 @@ def generate_pdf_doc(report_data):
     y_position = draw_text("DAX Tables", 100, y_position, size=14, bold=True)
     dax_tables = report_data.get("dax_tables")
     if dax_tables is not None and hasattr(dax_tables, 'empty') and not dax_tables.empty:
+         # Use confirmed column names based on potential debug prints
          for table in dax_tables.to_dict('records'):
-            y_position = draw_paragraph(f"Name: {table.get('name', 'N/A')}", 100, y_position)
-            if table.get('expression'):
-                 y_position = draw_text("Expression:", 100, y_position, size=10)
-                 y_position = draw_paragraph(table['expression'], 100, y_position)
+            name = table.get('Name', table.get('name', 'N/A')) # Try common variations
+            expression = table.get('Expression', table.get('expression', 'N/A')) # Try common variations
+            y_position = draw_paragraph(f"Name: {name}", 100, y_position)
+            y_position = draw_paragraph(f"Expression: {expression}", 100, y_position) # Always print expression with N/A if missing
     else:
         y_position = draw_paragraph("No DAX tables available.", 100, y_position)
 
@@ -245,11 +268,12 @@ def generate_pdf_doc(report_data):
     y_position = draw_text("DAX Measures", 100, y_position, size=14, bold=True)
     dax_measures = report_data.get("dax_measures")
     if dax_measures is not None and hasattr(dax_measures, 'empty') and not dax_measures.empty:
+        # Use confirmed column names based on potential debug prints
         for measure in dax_measures.to_dict('records'):
-            y_position = draw_paragraph(f"Name: {measure.get('name', 'N/A')}", 100, y_position)
-            if measure.get('expression'):
-                y_position = draw_text("Expression:", 100, y_position, size=10)
-                y_position = draw_paragraph(measure['expression'], 100, y_position)
+            name = measure.get('Name', measure.get('name', 'N/A')) # Try common variations
+            expression = measure.get('Expression', measure.get('expression', 'N/A')) # Try common variations
+            y_position = draw_paragraph(f"Name: {name}", 100, y_position)
+            y_position = draw_paragraph(f"Expression: {expression}", 100, y_position) # Always print expression with N/A if missing
     else:
         y_position = draw_paragraph("No DAX measures available.", 100, y_position)
 
@@ -312,6 +336,25 @@ def main():
                 "dax_tables": dax_tables,
                 "dax_measures": dax_measures,
             }
+
+            # Print types and column names for debugging
+            print("\n--- Debugging report_data types and columns ---")
+            for key, value in report_data.items():
+                print(f"Key: {key}, Type: {type(value)}")
+                if isinstance(value, pd.DataFrame):
+                    print(f"  DataFrame empty: {value.empty}")
+                    if not value.empty:
+                         print(f"  DataFrame columns: {value.columns.tolist()}")
+                         # print(f"  DataFrame head:\n{value.head()}") # Uncomment for more detailed inspection if needed
+                elif isinstance(value, list):
+                     print(f"  List length: {len(value)}")
+                     if value:
+                          print(f"  First item type: {type(value[0])}")
+                          # print(f"  First item:\n{value[0]}") # Uncomment for more detailed inspection if needed
+                else:
+                    print(f"  Value: {value}")
+            print("---------------------------------------------")
+
 
             # Clean up the temporary file
             os.remove(tmp_pbix_path)
