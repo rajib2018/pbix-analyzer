@@ -1,95 +1,162 @@
 import streamlit as st
+import os
+import tempfile
+import pbixray
+from docx import Document
 
-st.title("PBIX File Analyzer")
+# Define the functions within the Streamlit script for cohesion
 
-uploaded_file = st.file_uploader("Upload your PBIX file", type=["pbix"])
+def extract_pbix_info(pbix_file_path):
+    """
+    Extracts detailed information from a PBIX file.
+
+    Args:
+        pbix_file_path: Path to the PBIX file.
+
+    Returns:
+        A dictionary containing extracted information, or None if an error occurs.
+    """
+    try:
+        # Ensure the file exists
+        if not os.path.exists(pbix_file_path):
+            st.error(f"Error: File not found at {pbix_file_path}")
+            return None
+
+        with pbixray.open(pbix_file_path) as pbix:
+            info = {}
+
+            # Extract data model information
+            info["data_model"] = {
+                "tables": [table.Name for table in pbix.model.Tables],
+                "relationships": [rel.Name for rel in pbix.model.Relationships],
+                "measures": [measure.Name for measure in pbix.model.Measures]
+            }
+
+            # Extract page information
+            info["pages"] = [page.DisplayName for page in pbix.report.Pages]
+
+            # Extract visuals information (simplified example, can be expanded)
+            visuals_info = {}
+            if pbix.report.Pages:
+                first_page = pbix.report.Pages[0]
+                visuals_info[first_page.DisplayName] = "Details about visuals would go here (requires deeper parsing)"
+
+            info["visuals"] = visuals_info
+
+            return info
+
+    except Exception as e:
+        st.error(f"An error occurred during PBIX analysis: {e}")
+        return None
+
+def create_word_documentation(pbix_info, output_path):
+    """
+    Generates a Word document from extracted PBIX information.
+
+    Args:
+        pbix_info: Dictionary containing extracted PBIX information.
+        output_path: Path to save the generated Word document.
+    """
+    document = Document()
+
+    # Add title
+    document.add_heading('PBIX File Documentation', 0)
+
+    # Iterate through extracted information
+    for section, details in pbix_info.items():
+        # Add section heading
+        document.add_heading(section.replace('_', ' ').title(), level=1)
+
+        if isinstance(details, list):
+            # If details are a list, add them as list items
+            for item in details:
+                document.add_paragraph(str(item), style='List Bullet')
+        elif isinstance(details, dict):
+            # If details are a dictionary, add sub-headings and paragraphs
+            for sub_section, sub_details in details.items():
+                document.add_heading(sub_section.replace('_', ' ').title(), level=2)
+                if isinstance(sub_details, list):
+                    for item in sub_details:
+                        document.add_paragraph(str(item), style='List Bullet')
+                else:
+                    document.add_paragraph(str(sub_details))
+        else:
+            # For other types of details, add as a paragraph
+            document.add_paragraph(str(details))
+
+    # Add a note about potentially missing detailed information
+    document.add_paragraph(
+        "Note: Detailed information for some sections (e.g., specific visual configurations)"
+        " may require deeper parsing and are represented with placeholders if not fully extracted."
+    )
+
+    # Save the document
+    document.save(output_path)
+    st.success(f"Word document saved to {output_path}")
+
+
+# Streamlit App Layout and Logic
+st.set_page_config(layout="wide")
+st.title("PBIX File Analyzer and Document Generator")
+
+uploaded_file = st.file_uploader("Upload a PBIX file", type="pbix")
 
 if uploaded_file is not None:
-    st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+    # Create a temporary file to save the uploaded PBIX
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pbix") as tmp_file:
+        tmp_file.write(uploaded_file.getvalue())
+        tmp_file_path = tmp_file.name
 
-import streamlit as st
+    st.subheader("Analyzing PBIX file...")
 
-# Simulate the PBIX analysis results from the "Documentation generation" subtask
-pbix_analysis_results = {
-    "tables": [
-        {
-            "name": "Sales",
-            "columns": [
-                {"name": "OrderID", "type": "Int64"},
-                {"name": "ProductID", "type": "Int64"},
-                {"name": "SaleDate", "type": "DateTime"},
-                {"name": "Amount", "type": "Decimal"}
-            ],
-            "measures": [
-                {"name": "Total Sales", "expression": "SUM(Sales[Amount])"},
-                {"name": "Average Sale Amount", "expression": "AVERAGE(Sales[Amount])"}
-            ]
-        },
-        {
-            "name": "Products",
-            "columns": [
-                {"name": "ProductID", "type": "Int64"},
-                {"name": "ProductName", "type": "String"},
-                {"name": "Category", "type": "String"}
-            ],
-            "measures": []
-        }
-    ],
-    "relationships": [
-        {"from_table": "Sales", "from_column": "ProductID", "to_table": "Products", "to_column": "ProductID", "type": "Many-to-One"}
-    ]
-}
+    # Extract information
+    pbix_info = extract_pbix_info(tmp_file_path)
 
-# Define the documentation generation function from the "Documentation generation" subtask
-def generate_documentation(analysis_results):
-    """Generates documentation string from PBIX analysis results."""
-    documentation = "# PBIX File Documentation\n\n"
+    if pbix_info:
+        st.subheader("Extracted Information:")
 
-    documentation += "## Data Model Details\n\n"
+        # Display extracted information
+        st.write("### Data Model")
+        st.json(pbix_info.get("data_model", {}))
 
-    if "tables" in analysis_results and analysis_results["tables"]:
-        documentation += "### Tables\n\n"
-        for table in analysis_results["tables"]:
-            documentation += f"#### Table: {table['name']}\n\n"
-            if "columns" in table and table["columns"]:
-                documentation += "- **Columns:**\n"
-                for column in table["columns"]:
-                    documentation += f"  - {column['name']} (Type: {column['type']})\n"
-            if "measures" in table and table["measures"]:
-                documentation += "- **Measures:**\n"
-                for measure in table["measures"]:
-                    documentation += f"  - {measure['name']}\n"
-                    documentation += f"    - Expression: `{measure['expression']}`\n"
-            documentation += "\n"
+        st.write("### Pages")
+        st.json(pbix_info.get("pages", []))
 
-    if "relationships" in analysis_results and analysis_results["relationships"]:
-        documentation += "### Relationships\n\n"
-        for rel in analysis_results["relationships"]:
-            documentation += (
-                f"- From: {rel['from_table']}[{rel['from_column']}]\n"
-                f"  To: {rel['to_table']}[{rel['to_column']}]\n"
-                f"  Type: {rel['type']}\n"
-            )
-        documentation += "\n"
+        st.write("### Visuals (Simplified)")
+        st.json(pbix_info.get("visuals", {}))
 
-    return documentation
+        # Add a button to generate documentation
+        if st.button("Generate Word Documentation"):
+            doc_output_path = tmp_file_path.replace(".pbix", "_documentation.docx")
+            try:
+                create_word_documentation(pbix_info, doc_output_path)
 
-# Streamlit app structure
-st.title("PBIX File Analyzer and Documenter")
+                # Provide download button for the generated document
+                if os.path.exists(doc_output_path):
+                    with open(doc_output_path, "rb") as doc_file:
+                        st.download_button(
+                            label="Download Word Document",
+                            data=doc_file,
+                            file_name=os.path.basename(doc_output_path),
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+                else:
+                    st.error("Documentation file was not found after generation.")
 
-uploaded_file = st.file_uploader("Upload your PBIX file", type=["pbix"])
+            except Exception as e:
+                st.error(f"Error generating documentation: {e}")
 
-if uploaded_file is not None:
-    st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+    else:
+        st.error("Could not extract information from the PBIX file. Please check the file and try again.")
 
-    # Simulate analysis and generate documentation
-    # In a real app, you would process the uploaded_file here
-    generated_documentation_string = generate_documentation(pbix_analysis_results)
+    # Clean up the temporary file - placed outside the if pbix_info block
+    # to ensure cleanup even if extraction fails
+    try:
+        if os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
+            # st.info(f"Cleaned up temporary file: {tmp_file_path}") # Optional: for debugging
+    except Exception as e:
+        st.warning(f"Could not clean up temporary file {tmp_file_path}: {e}")
 
-    st.write("## Generated Documentation")
-    st.write(generated_documentation_string)
-
-    st.write("---")
-    st.write("Download options (Word, PDF) would be available here in a real environment.")
-
-
+else:
+    st.info("Please upload a PBIX file to get started.")
