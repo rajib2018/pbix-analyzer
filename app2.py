@@ -1,12 +1,17 @@
 # app.py
 import streamlit as st
-from pbixray.core import PBIXRay
 import os
-import tempfile
 from io import BytesIO
 import pandas as pd
-import traceback # Import traceback module
-import xlsxwriter # Required by pandas for to_excel with engine='xlsxwriter'
+import traceback
+import xlsxwriter
+from docx import Document
+from docx.shared import Inches
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 
 st.set_page_config(
 layout="wide", # Enables wide mode
@@ -14,7 +19,95 @@ page_title="PBIX Analyzer Advanced", # Sets the browser tab title
 page_icon="📊" # Sets a favicon or emoji
 )
 
-# Function to generate Excel document
+def generate_word_doc(report_data):
+    """Generates a Word document from the extracted report data."""
+    document = Document()
+
+    document.add_heading('Excel File Documentation', 0)
+
+    for sheet_name, df in report_data.items():
+        document.add_heading(f"Sheet: {sheet_name}", level=1)
+        if isinstance(df, pd.DataFrame) and not df.empty:
+            document.add_paragraph("Table Data:")
+            # Add DataFrame to Word document as a table
+            table = document.add_table(rows=1, cols=len(df.columns))
+            table.style = 'Table Grid'
+
+            # Add header row
+            hdr_cells = table.rows[0].cells
+            for i, col_name in enumerate(df.columns):
+                hdr_cells[i].text = str(col_name)
+
+            # Add data rows
+            for index, row in df.iterrows():
+                row_cells = table.add_row().cells
+                for i, col_data in enumerate(row):
+                    row_cells[i].text = str(col_data)
+        else:
+            document.add_paragraph("No data available for this sheet.")
+        document.add_page_break() # Add page break after each sheet
+
+
+    document_stream = BytesIO()
+    document.save(document_stream)
+    document_stream.seek(0)
+    return document_stream
+
+def generate_pdf_doc(report_data):
+    """Generates a PDF document from the extracted report data using ReportLab Flowables."""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            rightMargin=72, leftMargin=72,
+                            topMargin=72, bottomMargin=18)
+    story = []
+    styles = getSampleStyleSheet()
+
+    # Add title
+    story.append(Paragraph("Excel File Documentation", styles['Title']))
+    story.append(Spacer(1, 0.2 * inch))
+
+    for sheet_name, df in report_data.items():
+        story.append(Paragraph(f"Sheet: {sheet_name}", styles['Heading1']))
+        story.append(Spacer(1, 0.1 * inch))
+
+        if isinstance(df, pd.DataFrame) and not df.empty:
+            story.append(Paragraph("Table Data:", styles['Heading2']))
+            # Convert DataFrame to a list of lists for the table
+            data = [df.columns.tolist()] + df.values.tolist()
+
+            # Create a ReportLab table (requires reportlab.platypus.tables)
+            from reportlab.platypus import Table, TableStyle
+            from reportlab.lib import colors
+
+            table = Table(data)
+
+            # Add table style
+            style = TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ])
+            table.setStyle(style)
+
+            story.append(table)
+        else:
+            story.append(Paragraph("No data available for this sheet.", styles['Normal']))
+
+        story.append(Spacer(1, 0.5 * inch)) # Space after each sheet data
+        # story.append(PageBreak()) # Add page break after each sheet (optional)
+
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
 def generate_excel_doc(report_data):
     """Generates an Excel document with multiple sheets from the extracted report data."""
     output = BytesIO()
@@ -52,100 +145,57 @@ def generate_excel_doc(report_data):
 
 
 def main():
-    st.title("Power BI Report Documentation Generator")
+    st.title("Excel File Documentation Generator")
 
-    uploaded_file = st.file_uploader("Upload your Power BI .pbix file", type="pbix")
+    uploaded_file = st.file_uploader("Upload your Excel file", type="xlsx")
 
     if uploaded_file is not None:
         try:
-            # Create a temporary file to save the uploaded pbix
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pbix") as tmp_file:
-                tmp_file.write(uploaded_file.getvalue())
-                tmp_pbix_path = tmp_file.name
-
             st.success(f"File uploaded successfully: {uploaded_file.name}")
 
-            st.subheader("Extracting Report Information:")
+            st.subheader("Reading Excel Data:")
 
-            # Initialize PBIXRay with the temporary file path
-            pbix_ray = PBIXRay(tmp_pbix_path)
+            # Read the Excel file into a dictionary of DataFrames, one per sheet
+            excel_data = pd.read_excel(uploaded_file, sheet_name=None)
 
-            # Extract various pieces of information using pbixray
-            metadata = pbix_ray.metadata
-            st.write("Metadata:", metadata)
+            # Store extracted information in a dictionary (using sheet names as keys)
+            report_data = excel_data
 
-            schema = pbix_ray.schema
-            st.write("Schema:", schema)
+            st.success("Data read from Excel successfully!")
 
-            relationships = pbix_ray.relationships
-            st.write("Relationships:", relationships)
-
-            power_query = pbix_ray.power_query
-            st.write("Power Query:", power_query)
-
-            m_parameters = pbix_ray.m_parameters
-            st.write("M Parameters:", m_parameters)
-
-            dax_tables = pbix_ray.dax_tables
-            st.write("DAX Tables:", dax_tables)
-
-            dax_measures = pbix_ray.dax_measures
-            st.write("DAX Measures:", dax_measures)
-
-
-            st.success("Information extracted successfully!")
-
-            # Store extracted information in a dictionary for later use
-            report_data = {
-                "metadata": metadata,
-                "schema": schema,
-                "relationships": relationships,
-                "power_query": power_query,
-                "m_parameters": m_parameters,
-                "dax_tables": dax_tables,
-                "dax_measures": dax_measures,
-            }
-
-            # Print types and column names for debugging
-            print("\n--- Debugging report_data types and columns ---")
-            for key, value in report_data.items():
-                print(f"Key: {key}, Type: {type(value)}")
-                if isinstance(value, pd.DataFrame):
-                    print(f"  DataFrame empty: {value.empty}")
-                    if not value.empty:
-                         print(f"  DataFrame columns: {value.columns.tolist()}")
-                         # print(f"  DataFrame head:\n{value.head()}") # Uncomment for more detailed inspection if needed
-                elif isinstance(value, list):
-                     print(f"  List length: {len(value)}")
-                     if value:
-                          print(f"  First item type: {type(value[0])}")
-                          # print(f"  First item:\n{value[0]}") # Uncomment for more detailed inspection if needed
-                else:
-                    print(f"  Value: {value}")
-            print("---------------------------------------------")
-
-
-            # Clean up the temporary file
-            os.remove(tmp_pbix_path)
 
             st.subheader("Download Documentation:")
 
-            # Add download button for Excel
-            excel_doc_stream = generate_excel_doc(report_data)
+            # Add download buttons for Word, PDF, and Excel
+            word_doc_stream = generate_word_doc(report_data)
             st.download_button(
-                label="Download as Excel (.xlsx)",
-                data=excel_doc_stream,
-                file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                label="Download as Word (.docx)",
+                data=word_doc_stream,
+                file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
+            pdf_doc_stream = generate_pdf_doc(report_data)
+            st.download_button(
+                label="Download as PDF (.pdf)",
+                data=pdf_doc_stream,
+                file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.pdf",
+                mime="application/pdf"
+            )
+
+            # Add download button for the processed Excel file (optional, but keeps consistency)
+            excel_output_stream = generate_excel_doc(report_data) # Reuse the excel generator
+            st.download_button(
+                 label="Download as Excel (.xlsx)",
+                 data=excel_output_stream,
+                 file_name=f"{os.path.splitext(uploaded_file.name)[0]}_processed.xlsx",
+                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
-            st.error(traceback.format_exc()) # Print the full traceback
-            # Ensure temporary file is removed even if an error occurs
-            if 'tmp_pbix_path' in locals() and os.path.exists(tmp_pbix_path):
-                os.remove(tmp_pbix_path)
+            st.error(traceback.format_exc())
 
 
 if __name__ == "__main__":
