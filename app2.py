@@ -76,13 +76,15 @@ def generate_word_doc(report_data):
         if isinstance(schema, pd.DataFrame) and not schema.empty: # Handle case where schema might be a DataFrame
              document.add_paragraph("Schema Information (DataFrame format):")
              for index, row in schema.iterrows():
+                 print(f"Word Doc - Processing Schema Row (DataFrame): {row.to_dict()}") # Debug print
                  document.add_paragraph(f"  Table: {row.get('name', 'N/A')}")
                  # Assuming DataFrame schema has 'columns' as a string representation or similar
-                 columns_info = row.get('columns', 'N/A')
+                 columns_info = row.get('columns', 'N/A') # Keep using .get for robustness
                  document.add_paragraph(f"  Columns: {columns_info if columns_info else 'N/A'}") # Handle potential empty columns info
         elif isinstance(schema, list): # Schema is expected to be a list of dictionaries
             document.add_paragraph("Schema Information (List format):")
             for table in schema:
+                print(f"Word Doc - Processing Schema Table (List): {table}") # Debug print
                 document.add_heading(f"Table: {table.get('name', 'N/A')}", level=2)
                 if table.get("columns"):
                     document.add_paragraph("Columns:")
@@ -102,6 +104,7 @@ def generate_word_doc(report_data):
     if relationships is not None and hasattr(relationships, 'empty') and not relationships.empty:
         document.add_paragraph("Relationships:")
         for rel in relationships.to_dict('records'):
+            print(f"Word Doc - Processing Relationship: {rel}") # Debug print
             # Refine key access based on potential pbixray output structure
             from_table = rel.get('from_table', rel.get('From Table', rel.get('fromTable', 'N/A')))
             from_column = rel.get('from_column', rel.get('From Column', rel.get('fromColumn', 'N/A')))
@@ -117,6 +120,7 @@ def generate_word_doc(report_data):
     if power_query is not None and hasattr(power_query, 'empty') and not power_query.empty:
         document.add_paragraph("Power Query Code:")
         for pq in power_query.to_dict('records'):
+             print(f"Word Doc - Processing Power Query: {pq}") # Debug print
              # Refine key access based on potential pbixray output structure
              name = pq.get('name', pq.get('Name', 'N/A'))
              expression = pq.get('expression', pq.get('Expression', 'N/A'))
@@ -131,6 +135,7 @@ def generate_word_doc(report_data):
     if m_parameters is not None and hasattr(m_parameters, 'empty') and not m_parameters.empty:
         document.add_paragraph("M Parameters:")
         for param in m_parameters.to_dict('records'):
+            print(f"Word Doc - Processing M Parameter: {param}") # Debug print
             # Refine key access based on potential pbixray output structure
             name = param.get('name', param.get('Name', 'N/A'))
             value = param.get('value', param.get('Value', 'N/A'))
@@ -144,6 +149,7 @@ def generate_word_doc(report_data):
     if dax_tables is not None and hasattr(dax_tables, 'empty') and not dax_tables.empty:
          document.add_paragraph("DAX Tables:")
          for table in dax_tables.to_dict('records'):
+            print(f"Word Doc - Processing DAX Table: {table}") # Debug print
             # Refine key access based on potential pbixray output structure
             name = table.get('name', table.get('Name', 'N/A'))
             expression = table.get('expression', table.get('Expression', 'N/A'))
@@ -158,6 +164,7 @@ def generate_word_doc(report_data):
     if dax_measures is not None and hasattr(dax_measures, 'empty') and not dax_measures.empty:
         document.add_paragraph("DAX Measures:")
         for measure in dax_measures.to_dict('records'):
+            print(f"Word Doc - Processing DAX Measure: {measure}") # Debug print
             # Refine key access based on potential pbixray output structure
             name = measure.get('name', measure.get('Name', 'N/A'))
             expression = measure.get('expression', measure.get('Expression', 'N/A'))
@@ -188,12 +195,14 @@ def generate_pdf_doc(report_data):
         if isinstance(metadata, pd.DataFrame) and not metadata.empty:
              y_position = draw_paragraph(c, "Metadata (DataFrame format):", 100, y_position)
              for index, row in metadata.iterrows():
+                 print(f"PDF Doc - Processing Metadata Row (DataFrame): {row.to_dict()}") # Debug print
                  for col, value in row.items():
                       y_position = draw_paragraph(c, f"{col}: {value if pd.notna(value) else 'N/A'}", 100, y_position) # Handle potential NaN in DataFrame
                  y_position -= 10 # Add some space between records
         elif isinstance(metadata, dict):
             y_position = draw_paragraph(c, "Metadata (Dictionary format):", 100, y_position)
             for key, value in metadata.items():
+                 print(f"PDF Doc - Processing Metadata Item (Dict): {key}: {value}") # Debug print
                  y_position = draw_paragraph(c, f"{key}: {value if value else 'N/A'}", 100, y_position) # Handle potential empty strings or None in dict
         else:
             y_position = draw_paragraph(c, f"Metadata available in unexpected format: {type(metadata)}", 100, y_position)
@@ -207,19 +216,22 @@ def generate_pdf_doc(report_data):
         if isinstance(schema, pd.DataFrame) and not schema.empty: # Handle case where schema might be a DataFrame
              y_position = draw_paragraph(c, "Schema Information (DataFrame format):", 100, y_position)
              for index, row in schema.iterrows():
+                 print(f"PDF Doc - Processing Schema Row (DataFrame): {row.to_dict()}") # Debug print
                  y_position = draw_paragraph(c, f"  Table: {row.get('name', 'N/A')}", 100, y_position)
                  # Assuming DataFrame schema has 'columns' as a string representation or similar
-                 columns_info = row.get('columns', 'N/A')
+                 columns_info = row.get('columns', 'N/A') # Keep using .get for robustness
                  y_position = draw_paragraph(c, f"  Columns: {columns_info if columns_info else 'N/A'}", 100, y_position) # Handle potential empty columns info
                  y_position -= 10 # Add some space between records
         elif isinstance(schema, list): # Schema is expected to be a list of dictionaries
             y_position = draw_paragraph(c, "Schema Information (List format):", 100, y_position)
             for table in schema:
+                print(f"PDF Doc - Processing Schema Table (List): {table}") # Debug print
                 y_position = draw_text(c, f"Table: {table.get('name', 'N/A')}", 100, y_position, size=12, bold=True)
                 if table.get("columns"):
                     y_position = draw_text(c, "Columns:", 100, y_position, size=10)
                     for column in table["columns"]:
-                         y_position = draw_paragraph(c, f"- {column.get('name', 'N/A')} ({column.get('dataType', 'N/A')})", 100, y_position)
+                        print(f"PDF Doc - Processing Schema Column (List): {column}") # Debug print
+                        y_position = draw_paragraph(c, f"- {column.get('name', 'N/A')} ({column.get('dataType', 'N/A')})", 100, y_position)
                     y_position -= 10 # Add some space after columns
                 else:
                      y_position = draw_paragraph(c, "No columns found for this table.", 100, y_position)
@@ -235,6 +247,7 @@ def generate_pdf_doc(report_data):
     if relationships is not None and hasattr(relationships, 'empty') and not relationships.empty:
         y_position = draw_paragraph(c, "Relationships:", 100, y_position)
         for rel in relationships.to_dict('records'):
+            print(f"PDF Doc - Processing Relationship: {rel}") # Debug print
             # Refine key access based on potential pbixray output structure
             from_table = rel.get('from_table', rel.get('From Table', rel.get('fromTable', 'N/A')))
             from_column = rel.get('from_column', rel.get('From Column', rel.get('fromColumn', 'N/A')))
@@ -251,6 +264,7 @@ def generate_pdf_doc(report_data):
     if power_query is not None and hasattr(power_query, 'empty') and not power_query.empty:
         y_position = draw_paragraph(c, "Power Query Code:", 100, y_position)
         for pq in power_query.to_dict('records'):
+             print(f"PDF Doc - Processing Power Query: {pq}") # Debug print
              # Refine key access based on potential pbixray output structure
              name = pq.get('name', pq.get('Name', 'N/A'))
              expression = pq.get('expression', pq.get('Expression', 'N/A'))
@@ -266,6 +280,7 @@ def generate_pdf_doc(report_data):
     if m_parameters is not None and hasattr(m_parameters, 'empty') and not m_parameters.empty:
         y_position = draw_paragraph(c, "M Parameters:", 100, y_position)
         for param in m_parameters.to_dict('records'):
+            print(f"PDF Doc - Processing M Parameter: {param}") # Debug print
             # Refine key access based on potential pbixray output structure
             name = param.get('name', param.get('Name', 'N/A'))
             value = param.get('value', param.get('Value', 'N/A'))
@@ -280,6 +295,7 @@ def generate_pdf_doc(report_data):
     if dax_tables is not None and hasattr(dax_tables, 'empty') and not dax_tables.empty:
          y_position = draw_paragraph(c, "DAX Tables:", 100, y_position)
          for table in dax_tables.to_dict('records'):
+            print(f"PDF Doc - Processing DAX Table: {table}") # Debug print
             # Refine key access based on potential pbixray output structure
             name = table.get('name', table.get('Name', 'N/A'))
             expression = table.get('expression', table.get('Expression', 'N/A'))
@@ -295,6 +311,7 @@ def generate_pdf_doc(report_data):
     if dax_measures is not None and hasattr(dax_measures, 'empty') and not dax_measures.empty:
         y_position = draw_paragraph(c, "DAX Measures:", 100, y_position)
         for measure in dax_measures.to_dict('records'):
+            print(f"PDF Doc - Processing DAX Measure: {measure}") # Debug print
             # Refine key access based on potential pbixray output structure
             name = measure.get('name', measure.get('Name', 'N/A'))
             expression = measure.get('expression', measure.get('Expression', 'N/A'))
