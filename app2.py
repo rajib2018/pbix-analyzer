@@ -5,19 +5,13 @@ import os
 import tempfile
 from io import BytesIO
 import pandas as pd
-import traceback # Import traceback module
-import xlsxwriter # Required by pandas for to_excel with engine='xlsxwriter'
+import traceback 
+import xlsxwriter 
 
 st.set_page_config(
-layout="wide", # Enables wide mode
-page_title="PBIX Analyzer Advanced", # Sets the browser tab title
-page_icon="📊" # Sets a favicon or emoji
-)
-
-st.set_page_config(
-layout="wide", # Enables wide mode
-page_title="PBIX Analyzer Advanced", # Sets the browser tab title
-page_icon="📊" # Sets a favicon or emoji
+layout="wide", 
+page_title="PBIX Analyzer Advanced", 
+page_icon="📊" 
 )
 
 # Function to generate Excel document
