@@ -24,12 +24,12 @@ def generate_word_doc(report_data):
         document.add_paragraph("No metadata available.")
 
     # Add Model Statistics
-    document.add_heading('Model Statistics', level=1)
-    if report_data.get("model_stats"):
-        for key, value in report_data["model_stats"].items():
-            document.add_paragraph(f"{key}: {value}")
-    else:
-        document.add_paragraph("No model statistics available.")
+    #document.add_heading('Model Statistics', level=1)
+    #if report_data.get("model_stats"):
+        #for key, value in report_data["model_stats"].items():
+            #document.add_paragraph(f"{key}: {value}")
+    #else:
+        #document.add_paragraph("No model statistics available.")
 
     # Add Schema
     document.add_heading('Schema', level=1)
