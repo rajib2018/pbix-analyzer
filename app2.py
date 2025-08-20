@@ -163,4 +163,4 @@ def st_app():
         st.info("Please upload a PBIX file to analyze.")
 
 if __name__ == "__main__":
-    
+    pass
