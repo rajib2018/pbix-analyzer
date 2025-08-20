@@ -327,6 +327,42 @@ def generate_pdf_doc(report_data):
     buffer.seek(0)
     return buffer
 
+# Function to generate Excel document (copied from previous cell)
+def generate_excel_doc(report_data):
+    """Generates an Excel document with multiple sheets from the extracted report data."""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        for key, value in report_data.items():
+            # Attempt to convert various data types to DataFrame for Excel
+            if isinstance(value, pd.DataFrame):
+                df = value
+            elif isinstance(value, list):
+                # Try to create a DataFrame from a list of dictionaries
+                try:
+                    df = pd.DataFrame(value)
+                except Exception:
+                    # If list items are not dictionaries or inconsistent,
+                    # represent as a single column DataFrame
+                    df = pd.DataFrame({key: value})
+            elif isinstance(value, dict):
+                 # Convert dictionary to DataFrame (e.g., for metadata if it's a dict)
+                 df = pd.DataFrame.from_dict(value, orient='index', columns=[key])
+            else:
+                # Handle other types, perhaps as a single value DataFrame
+                df = pd.DataFrame({key: [value]})
+
+            # Write the DataFrame to a sheet named after the key
+            if not df.empty:
+                # Ensure sheet name is valid (max 31 chars, no invalid characters)
+                sheet_name = key[:31]
+                sheet_name = "".join([c for c in sheet_name if c.isalnum() or c in (' ', '_')]).rstrip()
+                if not sheet_name:
+                    sheet_name = "Sheet" + str(list(report_data.keys()).index(key) + 1) # Fallback name
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+    output.seek(0)
+    return output
+
 
 def main():
     st.title("Power BI Report Documentation Generator")
@@ -422,6 +458,15 @@ def main():
                 data=pdf_doc_stream,
                 file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.pdf",
                 mime="application/pdf"
+            )
+
+            # Add download button for Excel
+            excel_doc_stream = generate_excel_doc(report_data)
+            st.download_button(
+                label="Download as Excel (.xlsx)",
+                data=excel_doc_stream,
+                file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
 
