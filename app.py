@@ -1,6 +1,8 @@
 import streamlit as st
 from pbixray.core import PBIXRay
 
+st.set_page_config(layout="wide")
+
 def sizeof_fmt(num, suffix="B"):
     for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
         if abs(num) < 1024.0:
