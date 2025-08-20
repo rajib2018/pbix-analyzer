@@ -22,7 +22,8 @@ def extract_pbix_info(pbix_file_path):
             st.error(f"Error: File not found at {pbix_file_path}")
             return None
 
-        with pbixray.open(pbix_file_path) as pbix:
+        #with pbixray.open(pbix_file_path) as pbix:
+        with pbixray.PBIX(pbix_file_path) as pbix:
             info = {}
 
             # Extract data model information
