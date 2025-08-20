@@ -1,4 +1,4 @@
-# app.py
+#app2.py
 import streamlit as st
 from pbixray.core import PBIXRay
 import os
