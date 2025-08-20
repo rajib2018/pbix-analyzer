@@ -18,7 +18,7 @@ if uploaded_file is not None:
 
     try:
         # Analyze the temporary file with pbixray
-        analysis_result = pbixray.read_file(tmp_path)
+        analysis_result = pbixray.read(tmp_path)
         st.success("PBIX file analyzed successfully!")
         # You can display or process analysis_result here in future steps
         # st.write(analysis_result)
