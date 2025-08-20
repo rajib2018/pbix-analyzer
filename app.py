@@ -57,7 +57,7 @@ def app():
         # Let the user select a table name
         table_name_input = st.selectbox("Select a table to peek at its contents:", model.tables)
 
-        if st.button("Un-VertiPaq"):
+        if st.button("Show Data"):
             st.dataframe(model.get_table(table_name_input), use_container_width=True)
 
 
