@@ -11,8 +11,6 @@ from io import BytesIO
 import pandas as pd
 import traceback # Import traceback module
 
-st.set_page_config(layout="wide")
-
 def generate_word_doc(report_data):
     """Generates a Word document from the extracted report data."""
     document = Document()
@@ -22,9 +20,15 @@ def generate_word_doc(report_data):
     # Add Metadata
     document.add_heading('Metadata', level=1)
     metadata = report_data.get("metadata")
-    if metadata: # Metadata is a dictionary, direct check is fine
-        for key, value in metadata.items():
-            document.add_paragraph(f"{key}: {value}")
+    # Check if metadata is a dictionary or a non-empty DataFrame
+    if metadata and (isinstance(metadata, dict) or (isinstance(metadata, pd.DataFrame) and not metadata.empty)):
+        if isinstance(metadata, dict):
+            for key, value in metadata.items():
+                document.add_paragraph(f"{key}: {value}")
+        elif isinstance(metadata, pd.DataFrame):
+             for index, row in metadata.iterrows():
+                 for col, value in row.items():
+                      document.add_paragraph(f"{col}: {value}")
     else:
         document.add_paragraph("No metadata available.")
 
@@ -135,9 +139,15 @@ def generate_pdf_doc(report_data):
     # Add Metadata
     y_position = draw_text("Metadata", 100, y_position, size=14, bold=True)
     metadata = report_data.get("metadata")
-    if metadata:
-        for key, value in metadata.items():
-            y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
+    # Check if metadata is a dictionary or a non-empty DataFrame
+    if metadata and (isinstance(metadata, dict) or (isinstance(metadata, pd.DataFrame) and not metadata.empty)):
+        if isinstance(metadata, dict):
+            for key, value in metadata.items():
+                 y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
+        elif isinstance(metadata, pd.DataFrame):
+             for index, row in metadata.iterrows():
+                 for col, value in row.items():
+                      y_position = draw_paragraph(f"{col}: {value}", 100, y_position)
     else:
         y_position = draw_paragraph("No metadata available.", 100, y_position)
 
