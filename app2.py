@@ -74,7 +74,7 @@ def main():
             metadata = pbix_ray.metadata
             st.write("Metadata:", metadata)
 
-            model = pbix_ray.model
+            #model = pbix_ray.model
 
             schema = pbix_ray.schema
             st.write("Schema:", schema)
@@ -106,7 +106,7 @@ def main():
                 "m_parameters": m_parameters,
                 "dax_tables": dax_tables,
                 "dax_measures": dax_measures,
-                "model": model,
+                #"model": model,
             }
 
             # Print types and column names for debugging
@@ -141,13 +141,13 @@ def main():
                 file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-            st.subheader("Show data from Tables:")
+            #st.subheader("Show data from Tables:")
                 
             # Let the user select a table name
-            table_name_input = st.selectbox("Select a table to peek at its contents:", model.tables)
+            #table_name_input = st.selectbox("Select a table to peek at its contents:", model.tables)
 
-            if st.button("Show Data"):
-                st.dataframe(model.get_table(table_name_input), use_container_width=True))
+            #if st.button("Show Data"):
+                #st.dataframe(model.get_table(table_name_input), use_container_width=True))
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
