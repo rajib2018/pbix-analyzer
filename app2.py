@@ -106,7 +106,7 @@ def main():
                 "m_parameters": m_parameters,
                 "dax_tables": dax_tables,
                 "dax_measures": dax_measures,
-                "model": model
+                "model": model,
             }
 
             # Print types and column names for debugging
