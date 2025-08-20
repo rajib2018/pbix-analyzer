@@ -44,17 +44,28 @@ def generate_word_doc(report_data):
     # Add Schema
     document.add_heading('Schema', level=1)
     schema = report_data.get("schema")
-    if schema: # Schema is a list of dictionaries, direct check is fine
-        for table in schema:
-            document.add_heading(f"Table: {table.get('name', 'N/A')}", level=2)
-            if table.get("columns"):
-                document.add_paragraph("Columns:")
-                for column in table["columns"]:
-                    document.add_paragraph(f"- {column.get('name', 'N/A')} ({column.get('dataType', 'N/A')})")
-            else:
-                document.add_paragraph("No columns found for this table.")
+    if schema is not None:
+        if isinstance(schema, pd.DataFrame) and not schema.empty: # Handle case where schema might be a DataFrame
+             document.add_paragraph("Schema Information (DataFrame format):")
+             for index, row in schema.iterrows():
+                 document.add_paragraph(f"  Table: {row.get('name', 'N/A')}")
+                 # Assuming DataFrame schema has 'columns' as a string representation or similar
+                 if row.get('columns'):
+                      document.add_paragraph(f"  Columns: {row['columns']}")
+        elif isinstance(schema, list): # Schema is expected to be a list of dictionaries
+            for table in schema:
+                document.add_heading(f"Table: {table.get('name', 'N/A')}", level=2)
+                if table.get("columns"):
+                    document.add_paragraph("Columns:")
+                    for column in table["columns"]:
+                        document.add_paragraph(f"- {column.get('name', 'N/A')} ({column.get('dataType', 'N/A')})")
+                else:
+                    document.add_paragraph("No columns found for this table.")
+        else:
+            document.add_paragraph("No schema information available or in unexpected format.")
     else:
         document.add_paragraph("No schema information available.")
+
 
     # Add Relationships
     document.add_heading('Relationships', level=1)
@@ -165,17 +176,28 @@ def generate_pdf_doc(report_data):
     # Add Schema
     y_position = draw_text("Schema", 100, y_position, size=14, bold=True)
     schema = report_data.get("schema")
-    if schema:
-        for table in schema:
-            y_position = draw_text(f"Table: {table.get('name', 'N/A')}", 100, y_position, size=12, bold=True)
-            if table.get("columns"):
-                y_position = draw_text("Columns:", 100, y_position, size=10)
-                for column in table["columns"]:
-                     y_position = draw_paragraph(f"- {column.get('name', 'N/A')} ({column.get('dataType', 'N/A')})", 100, y_position)
-            else:
-                 y_position = draw_paragraph("No columns found for this table.", 100, y_position)
+    if schema is not None:
+        if isinstance(schema, pd.DataFrame) and not schema.empty: # Handle case where schema might be a DataFrame
+             y_position = draw_paragraph("Schema Information (DataFrame format):", 100, y_position)
+             for index, row in schema.iterrows():
+                 y_position = draw_paragraph(f"  Table: {row.get('name', 'N/A')}", 100, y_position)
+                 # Assuming DataFrame schema has 'columns' as a string representation or similar
+                 if row.get('columns'):
+                      y_position = draw_paragraph(f"  Columns: {row['columns']}", 100, y_position)
+        elif isinstance(schema, list): # Schema is expected to be a list of dictionaries
+            for table in schema:
+                y_position = draw_text(f"Table: {table.get('name', 'N/A')}", 100, y_position, size=12, bold=True)
+                if table.get("columns"):
+                    y_position = draw_text("Columns:", 100, y_position, size=10)
+                    for column in table["columns"]:
+                         y_position = draw_paragraph(f"- {column.get('name', 'N/A')} ({column.get('dataType', 'N/A')})", 100, y_position)
+                else:
+                     y_position = draw_paragraph("No columns found for this table.", 100, y_position)
+        else:
+            y_position = draw_paragraph("No schema information available or in unexpected format.", 100, y_position)
     else:
         y_position = draw_paragraph("No schema information available.", 100, y_position)
+
 
     # Add Relationships
     y_position = draw_text("Relationships", 100, y_position, size=14, bold=True)
