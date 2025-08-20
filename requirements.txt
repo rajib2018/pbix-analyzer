@@ -2,9 +2,6 @@ streamlit
 pbixray 
 python-docx
 reportlab
-os
-tempfile
 docx
-io
 pandas
 traceback
