@@ -1,3 +1,4 @@
 streamlit 
 pbixray 
 python-docx
+reportlab
