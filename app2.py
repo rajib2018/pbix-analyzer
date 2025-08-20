@@ -10,12 +10,14 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 import pandas as pd
 import traceback # Import traceback module
+import xlsxwriter # Ensure xlsxwriter is imported if needed explicitly, though pandas uses it internally
 
 st.set_page_config(
 layout="wide", # Enables wide mode
 page_title="PBIX Analyzer Advanced", # Sets the browser tab title
 page_icon="📊" # Sets a favicon or emoji
 )
+
 
 # Helper functions for PDF generation (moved outside to be accessible by generate_pdf_doc)
 def draw_text(c, text, x, y, size=12, bold=False):
