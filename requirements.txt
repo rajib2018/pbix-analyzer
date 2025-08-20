@@ -2,3 +2,6 @@ streamlit
 pbixray 
 python-docx
 reportlab
+tempfile
+os
+io
