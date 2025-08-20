@@ -9,7 +9,7 @@ def sizeof_fmt(num, suffix="B"):
     return f"{num:.1f}Yi{suffix}"
 
 def app():
-    st.title("PBIX info")
+    st.title("PBIX File Details")
 
     uploaded_file = st.file_uploader("Choose a PBIX file", type="pbix")
     if uploaded_file:
