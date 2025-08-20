@@ -8,6 +8,7 @@ from docx.shared import Inches
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from io import BytesIO
+import pandas as pd
 
 def generate_word_doc(report_data):
     """Generates a Word document from the extracted report data."""
@@ -22,14 +23,6 @@ def generate_word_doc(report_data):
             document.add_paragraph(f"{key}: {value}")
     else:
         document.add_paragraph("No metadata available.")
-
-    # Add Model Statistics
-    #document.add_heading('Model Statistics', level=1)
-    #if report_data.get("model_stats"):
-        #for key, value in report_data["model_stats"].items():
-            #document.add_paragraph(f"{key}: {value}")
-    #else:
-        #document.add_paragraph("No model statistics available.")
 
     # Add Schema
     document.add_heading('Schema', level=1)
@@ -47,31 +40,35 @@ def generate_word_doc(report_data):
 
     # Add Relationships
     document.add_heading('Relationships', level=1)
-    if report_data.get("relationships"):
-        for rel in report_data["relationships"]:
+    if report_data.get("relationships") is not None and not report_data.get("relationships").empty:
+        for rel in report_data["relationships"].to_dict('records'):
             document.add_paragraph(f"From Table: {rel.get('fromTable', 'N/A')}, From Column: {rel.get('fromColumn', 'N/A')}, To Table: {rel.get('toTable', 'N/A')}, To Column: {rel.get('toColumn', 'N/A')}")
     else:
         document.add_paragraph("No relationships available.")
 
     # Add Power Query Code
     document.add_heading('Power Query Code', level=1)
-    if report_data.get("power_query"):
-        document.add_paragraph(report_data["power_query"])
+    if report_data.get("power_query") is not None and not report_data.get("power_query").empty:
+        for pq in report_data["power_query"].to_dict('records'):
+             document.add_paragraph(f"Name: {pq.get('name', 'N/A')}")
+             if pq.get('expression'):
+                  document.add_paragraph("Expression:")
+                  document.add_paragraph(pq['expression'])
     else:
         document.add_paragraph("No Power Query code available.")
 
     # Add M Parameters
     document.add_heading('M Parameters', level=1)
-    if report_data.get("m_parameters"):
-        for param in report_data["m_parameters"]:
+    if report_data.get("m_parameters") is not None and not report_data.get("m_parameters").empty:
+        for param in report_data["m_parameters"].to_dict('records'):
             document.add_paragraph(f"Name: {param.get('name', 'N/A')}, Value: {param.get('value', 'N/A')}")
     else:
         document.add_paragraph("No M parameters available.")
 
     # Add DAX Tables
     document.add_heading('DAX Tables', level=1)
-    if report_data.get("dax_tables"):
-         for table in report_data["dax_tables"]:
+    if report_data.get("dax_tables") is not None and not report_data.get("dax_tables").empty:
+         for table in report_data["dax_tables"].to_dict('records'):
             document.add_paragraph(f"Name: {table.get('name', 'N/A')}")
             if table.get('expression'):
                  document.add_paragraph("Expression:")
@@ -81,26 +78,14 @@ def generate_word_doc(report_data):
 
     # Add DAX Measures
     document.add_heading('DAX Measures', level=1)
-    if report_data.get("dax_measures"):
-        for measure in report_data["dax_measures"]:
+    if report_data.get("dax_measures") is not None and not report_data.get("dax_measures").empty:
+        for measure in report_data["dax_measures"].to_dict('records'):
             document.add_paragraph(f"Name: {measure.get('name', 'N/A')}")
             if measure.get('expression'):
                 document.add_paragraph("Expression:")
                 document.add_paragraph(measure['expression'])
     else:
         document.add_paragraph("No DAX measures available.")
-
-    # Add Calculated Columns
-    #document.add_heading('Calculated Columns', level=1)
-    #if report_data.get("calculated_columns"):
-         #for column in report_data["calculated_columns"]:
-            #document.add_paragraph(f"Name: {column.get('name', 'N/A')}, Table: {column.get('tableName', 'N/A')}")
-            #if column.get('expression'):
-                #document.add_paragraph("Expression:")
-                #document.add_paragraph(column['expression'])
-    #else:
-        #document.add_paragraph("No calculated columns available.")
-
 
     document_stream = BytesIO()
     document.save(document_stream)
@@ -145,16 +130,6 @@ def generate_pdf_doc(report_data):
     else:
         y_position = draw_paragraph("No metadata available.", 100, y_position)
 
-
-     # Add Model Statistics
-    #y_position = draw_text("Model Statistics", 100, y_position, size=14, bold=True)
-    #if report_data.get("model_stats"):
-        #for key, value in report_data["model_stats"].items():
-            #y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
-    #else:
-        #y_position = draw_paragraph("No model statistics available.", 100, y_position)
-
-
     # Add Schema
     y_position = draw_text("Schema", 100, y_position, size=14, bold=True)
     if report_data.get("schema"):
@@ -169,34 +144,37 @@ def generate_pdf_doc(report_data):
     else:
         y_position = draw_paragraph("No schema information available.", 100, y_position)
 
-
     # Add Relationships
     y_position = draw_text("Relationships", 100, y_position, size=14, bold=True)
-    if report_data.get("relationships"):
-        for rel in report_data["relationships"]:
+    if report_data.get("relationships") is not None and not report_data.get("relationships").empty:
+        for rel in report_data["relationships"].to_dict('records'):
             y_position = draw_paragraph(f"From Table: {rel.get('fromTable', 'N/A')}, From Column: {rel.get('fromColumn', 'N/A')}, To Table: {rel.get('toTable', 'N/A')}, To Column: {rel.get('toColumn', 'N/A')}", 100, y_position)
     else:
         y_position = draw_paragraph("No relationships available.", 100, y_position)
 
     # Add Power Query Code
     y_position = draw_text("Power Query Code", 100, y_position, size=14, bold=True)
-    if report_data.get("power_query"):
-        y_position = draw_paragraph(report_data["power_query"], 100, y_position)
+    if report_data.get("power_query") is not None and not report_data.get("power_query").empty:
+        for pq in report_data["power_query"].to_dict('records'):
+            y_position = draw_paragraph(f"Name: {pq.get('name', 'N/A')}", 100, y_position)
+            if pq.get('expression'):
+                y_position = draw_text("Expression:", 100, y_position, size=10)
+                y_position = draw_paragraph(pq['expression'], 100, y_position)
     else:
         y_position = draw_paragraph("No Power Query code available.", 100, y_position)
 
     # Add M Parameters
     y_position = draw_text("M Parameters", 100, y_position, size=14, bold=True)
-    if report_data.get("m_parameters"):
-        for param in report_data["m_parameters"]:
+    if report_data.get("m_parameters") is not None and not report_data.get("m_parameters").empty:
+        for param in report_data["m_parameters"].to_dict('records'):
             y_position = draw_paragraph(f"Name: {param.get('name', 'N/A')}, Value: {param.get('value', 'N/A')}", 100, y_position)
     else:
         y_position = draw_paragraph("No M parameters available.", 100, y_position)
 
     # Add DAX Tables
     y_position = draw_text("DAX Tables", 100, y_position, size=14, bold=True)
-    if report_data.get("dax_tables"):
-         for table in report_data["dax_tables"]:
+    if report_data.get("dax_tables") is not None and not report_data.get("dax_tables").empty:
+         for table in report_data["dax_tables"].to_dict('records'):
             y_position = draw_paragraph(f"Name: {table.get('name', 'N/A')}", 100, y_position)
             if table.get('expression'):
                  y_position = draw_text("Expression:", 100, y_position, size=10)
@@ -206,26 +184,14 @@ def generate_pdf_doc(report_data):
 
     # Add DAX Measures
     y_position = draw_text("DAX Measures", 100, y_position, size=14, bold=True)
-    if report_data.get("dax_measures"):
-        for measure in report_data["dax_measures"]:
+    if report_data.get("dax_measures") is not None and not report_data.get("dax_measures").empty:
+        for measure in report_data["dax_measures"].to_dict('records'):
             y_position = draw_paragraph(f"Name: {measure.get('name', 'N/A')}", 100, y_position)
             if measure.get('expression'):
                 y_position = draw_text("Expression:", 100, y_position, size=10)
                 y_position = draw_paragraph(measure['expression'], 100, y_position)
     else:
         y_position = draw_paragraph("No DAX measures available.", 100, y_position)
-
-    # Add Calculated Columns
-    #y_position = draw_text("Calculated Columns", 100, y_position, size=14, bold=True)
-    #if report_data.get("calculated_columns"):
-         #for column in report_data["calculated_columns"]:
-            #y_position = draw_paragraph(f"Name: {column.get('name', 'N/A')}, Table: {column.get('tableName', 'N/A')}", 100, y_position)
-            #if column.get('expression'):
-                #y_position = draw_text("Expression:", 100, y_position, size=10)
-                #y_position = draw_paragraph(column['expression'], 100, y_position)
-    #else:
-        #y_position = draw_paragraph("No calculated columns available.", 100, y_position)
-
 
     c.save()
     buffer.seek(0)
@@ -253,28 +219,38 @@ def main():
 
             # Extract various pieces of information using pbixray
             metadata = pbix_ray.metadata
-            #model_stats = pbix_ray.model_stats
+            st.write("Metadata:", metadata)
+
             schema = pbix_ray.schema
+            st.write("Schema:", schema)
+
             relationships = pbix_ray.relationships
+            st.write("Relationships:", relationships)
+
             power_query = pbix_ray.power_query
+            st.write("Power Query:", power_query)
+
             m_parameters = pbix_ray.m_parameters
+            st.write("M Parameters:", m_parameters)
+
             dax_tables = pbix_ray.dax_tables
+            st.write("DAX Tables:", dax_tables)
+
             dax_measures = pbix_ray.dax_measures
-            #calculated_columns = pbix_ray.calculated_columns
+            st.write("DAX Measures:", dax_measures)
+
 
             st.success("Information extracted successfully!")
 
             # Store extracted information in a dictionary for later use
             report_data = {
                 "metadata": metadata,
-                #"model_stats": model_stats,
                 "schema": schema,
                 "relationships": relationships,
                 "power_query": power_query,
                 "m_parameters": m_parameters,
                 "dax_tables": dax_tables,
                 "dax_measures": dax_measures,
-                #"calculated_columns": calculated_columns
             }
 
             # Clean up the temporary file
