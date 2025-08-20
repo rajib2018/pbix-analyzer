@@ -91,15 +91,15 @@ def generate_word_doc(report_data):
         document.add_paragraph("No DAX measures available.")
 
     # Add Calculated Columns
-    document.add_heading('Calculated Columns', level=1)
-    if report_data.get("calculated_columns"):
-         for column in report_data["calculated_columns"]:
-            document.add_paragraph(f"Name: {column.get('name', 'N/A')}, Table: {column.get('tableName', 'N/A')}")
-            if column.get('expression'):
-                document.add_paragraph("Expression:")
-                document.add_paragraph(column['expression'])
-    else:
-        document.add_paragraph("No calculated columns available.")
+    #document.add_heading('Calculated Columns', level=1)
+    #if report_data.get("calculated_columns"):
+         #for column in report_data["calculated_columns"]:
+            #document.add_paragraph(f"Name: {column.get('name', 'N/A')}, Table: {column.get('tableName', 'N/A')}")
+            #if column.get('expression'):
+                #document.add_paragraph("Expression:")
+                #document.add_paragraph(column['expression'])
+    #else:
+        #document.add_paragraph("No calculated columns available.")
 
 
     document_stream = BytesIO()
@@ -216,15 +216,15 @@ def generate_pdf_doc(report_data):
         y_position = draw_paragraph("No DAX measures available.", 100, y_position)
 
     # Add Calculated Columns
-    y_position = draw_text("Calculated Columns", 100, y_position, size=14, bold=True)
-    if report_data.get("calculated_columns"):
-         for column in report_data["calculated_columns"]:
-            y_position = draw_paragraph(f"Name: {column.get('name', 'N/A')}, Table: {column.get('tableName', 'N/A')}", 100, y_position)
-            if column.get('expression'):
-                y_position = draw_text("Expression:", 100, y_position, size=10)
-                y_position = draw_paragraph(column['expression'], 100, y_position)
-    else:
-        y_position = draw_paragraph("No calculated columns available.", 100, y_position)
+    #y_position = draw_text("Calculated Columns", 100, y_position, size=14, bold=True)
+    #if report_data.get("calculated_columns"):
+         #for column in report_data["calculated_columns"]:
+            #y_position = draw_paragraph(f"Name: {column.get('name', 'N/A')}, Table: {column.get('tableName', 'N/A')}", 100, y_position)
+            #if column.get('expression'):
+                #y_position = draw_text("Expression:", 100, y_position, size=10)
+                #y_position = draw_paragraph(column['expression'], 100, y_position)
+    #else:
+        #y_position = draw_paragraph("No calculated columns available.", 100, y_position)
 
 
     c.save()
@@ -260,7 +260,7 @@ def main():
             m_parameters = pbix_ray.m_parameters
             dax_tables = pbix_ray.dax_tables
             dax_measures = pbix_ray.dax_measures
-            calculated_columns = pbix_ray.calculated_columns
+            #calculated_columns = pbix_ray.calculated_columns
 
             st.success("Information extracted successfully!")
 
@@ -274,7 +274,7 @@ def main():
                 "m_parameters": m_parameters,
                 "dax_tables": dax_tables,
                 "dax_measures": dax_measures,
-                "calculated_columns": calculated_columns
+                #"calculated_columns": calculated_columns
             }
 
             # Clean up the temporary file
