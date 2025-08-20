@@ -2,6 +2,88 @@ import streamlit as st
 import tempfile
 import os
 import io # Import io for BytesIO
+import json
+
+def analyze_pbix_file(pbix_file_path):
+    """
+    Analyzes a PBIX file and extracts key information.
+
+    Args:
+        pbix_file_path: Path to the PBIX file.
+
+    Returns:
+        A dictionary containing extracted information about the PBIX file.
+    """
+    try:
+        pbix_model = pbixray.PBIXRay(pbix_file_path)
+
+        analysis_results = {
+            "metadata": pbix_model.metadata(),
+            "size_bytes": pbix_model.size(),
+            "tables": {},
+            "relationships": [],
+            "measures": {},
+            "power_query": pbix_model.power_query(),
+            "m_parameters": pbix_model.m_parameters(),
+            "dax_tables": pbix_model.dax_tables(),
+        }
+
+        # Extract table and column details
+        for table in pbix_model.tables():
+            table_info = {
+                "name": table.name(),
+                "row_count": table.row_count(),
+                "columns": {}
+            }
+            for column in table.columns():
+                column_info = {
+                    "name": column.name(),
+                    "data_type": column.data_type(),
+                    "is_hidden": column.is_hidden(),
+                    "is_keyed": column.is_keyed(),
+                    "is_nullable": column.is_nullable(),
+                    "is_unique": column.is_unique(),
+                    "source_column": column.source_column(),
+                    "summarization_function": column.summarization_function(),
+                    "data_category": column.data_category(),
+                    "display_folder": column.display_folder(),
+                    "format_string": column.format_string(),
+                    "expression": column.expression() if hasattr(column, 'expression') else None # For calculated columns
+                }
+                table_info["columns"][column.name()] = column_info
+            analysis_results["tables"][table.name()] = table_info
+
+        # Extract measure details
+        for measure in pbix_model.measures():
+            measure_info = {
+                "name": measure.name(),
+                "expression": measure.expression(),
+                "display_folder": measure.display_folder(),
+                "format_string": measure.format_string(),
+                "is_hidden": measure.is_hidden()
+            }
+            analysis_results["measures"][measure.name()] = measure_info
+
+        # Extract relationship details
+        for relationship in pbix_model.relationships():
+            relationship_info = {
+                "name": relationship.name(),
+                "from_table": relationship.from_table(),
+                "from_column": relationship.from_column(),
+                "to_table": relationship.to_table(),
+                "to_column": relationship.to_column(),
+                "model": relationship.model(), # Indicates relationship type (e.g., 1:M, M:1)
+                "active": relationship.is_active(),
+                "cross_filter_direction": relationship.cross_filter_direction(),
+                "security_filter_table": relationship.security_filter_table()
+            }
+            analysis_results["relationships"].append(relationship_info)
+
+        return analysis_results
+
+    except Exception as e:
+        print(f"Error analyzing PBIX file: {e}")
+        return None
 
 def sizeof_fmt(num, suffix='B'):
     """Formats a number into a human-readable byte string."""
