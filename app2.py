@@ -139,7 +139,7 @@ def main():
                 label="Download as Excel (.xlsx)",
                 data=excel_doc_stream,
                 file_name=f"{os.path.splitext(uploaded_file.name)[0]}_documentation.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
             #st.subheader("Show data from Tables:")
                 
