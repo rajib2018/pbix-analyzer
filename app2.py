@@ -147,12 +147,12 @@ def generate_pdf_doc(report_data):
 
 
      # Add Model Statistics
-    y_position = draw_text("Model Statistics", 100, y_position, size=14, bold=True)
-    if report_data.get("model_stats"):
-        for key, value in report_data["model_stats"].items():
-            y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
-    else:
-        y_position = draw_paragraph("No model statistics available.", 100, y_position)
+    #y_position = draw_text("Model Statistics", 100, y_position, size=14, bold=True)
+    #if report_data.get("model_stats"):
+        #for key, value in report_data["model_stats"].items():
+            #y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
+    #else:
+        #y_position = draw_paragraph("No model statistics available.", 100, y_position)
 
 
     # Add Schema
@@ -253,7 +253,7 @@ def main():
 
             # Extract various pieces of information using pbixray
             metadata = pbix_ray.metadata
-            model_stats = pbix_ray.model_stats
+            #model_stats = pbix_ray.model_stats
             schema = pbix_ray.schema
             relationships = pbix_ray.relationships
             power_query = pbix_ray.power_query
@@ -267,7 +267,7 @@ def main():
             # Store extracted information in a dictionary for later use
             report_data = {
                 "metadata": metadata,
-                "model_stats": model_stats,
+                #"model_stats": model_stats,
                 "schema": schema,
                 "relationships": relationships,
                 "power_query": power_query,
