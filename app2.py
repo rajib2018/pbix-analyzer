@@ -11,6 +11,8 @@ from io import BytesIO
 import pandas as pd
 import traceback # Import traceback module
 
+st.set_page_config(layout="wide")
+
 def generate_word_doc(report_data):
     """Generates a Word document from the extracted report data."""
     document = Document()
