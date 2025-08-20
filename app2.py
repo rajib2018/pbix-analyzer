@@ -147,7 +147,7 @@ def main():
             table_name_input = st.selectbox("Select a table to peek at its contents:", model.tables)
 
             if st.button("Show Data"):
-                st.dataframe(model.get_table(table_name_input), use_container_width=True))
+                st.dataframe(model.get_table(table_name_input), use_container_width=True)
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
