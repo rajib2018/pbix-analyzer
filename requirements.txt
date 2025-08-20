@@ -3,3 +3,4 @@ pbixray
 python-docx
 reportlab
 pandas
+xlsxwriter
