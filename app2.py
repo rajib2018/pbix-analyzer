@@ -9,6 +9,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from io import BytesIO
 import pandas as pd
+import traceback # Import traceback module
 
 def generate_word_doc(report_data):
     """Generates a Word document from the extracted report data."""
@@ -18,16 +19,18 @@ def generate_word_doc(report_data):
 
     # Add Metadata
     document.add_heading('Metadata', level=1)
-    if report_data.get("metadata"):
-        for key, value in report_data["metadata"].items():
+    metadata = report_data.get("metadata")
+    if metadata: # Metadata is a dictionary, direct check is fine
+        for key, value in metadata.items():
             document.add_paragraph(f"{key}: {value}")
     else:
         document.add_paragraph("No metadata available.")
 
     # Add Schema
     document.add_heading('Schema', level=1)
-    if report_data.get("schema"):
-        for table in report_data["schema"]:
+    schema = report_data.get("schema")
+    if schema: # Schema is a list of dictionaries, direct check is fine
+        for table in schema:
             document.add_heading(f"Table: {table.get('name', 'N/A')}", level=2)
             if table.get("columns"):
                 document.add_paragraph("Columns:")
@@ -40,16 +43,18 @@ def generate_word_doc(report_data):
 
     # Add Relationships
     document.add_heading('Relationships', level=1)
-    if report_data.get("relationships") is not None and not report_data.get("relationships").empty:
-        for rel in report_data["relationships"].to_dict('records'):
+    relationships = report_data.get("relationships")
+    if relationships is not None and hasattr(relationships, 'empty') and not relationships.empty:
+        for rel in relationships.to_dict('records'):
             document.add_paragraph(f"From Table: {rel.get('fromTable', 'N/A')}, From Column: {rel.get('fromColumn', 'N/A')}, To Table: {rel.get('toTable', 'N/A')}, To Column: {rel.get('toColumn', 'N/A')}")
     else:
         document.add_paragraph("No relationships available.")
 
     # Add Power Query Code
     document.add_heading('Power Query Code', level=1)
-    if report_data.get("power_query") is not None and not report_data.get("power_query").empty:
-        for pq in report_data["power_query"].to_dict('records'):
+    power_query = report_data.get("power_query")
+    if power_query is not None and hasattr(power_query, 'empty') and not power_query.empty:
+        for pq in power_query.to_dict('records'):
              document.add_paragraph(f"Name: {pq.get('name', 'N/A')}")
              if pq.get('expression'):
                   document.add_paragraph("Expression:")
@@ -59,16 +64,18 @@ def generate_word_doc(report_data):
 
     # Add M Parameters
     document.add_heading('M Parameters', level=1)
-    if report_data.get("m_parameters") is not None and not report_data.get("m_parameters").empty:
-        for param in report_data["m_parameters"].to_dict('records'):
+    m_parameters = report_data.get("m_parameters")
+    if m_parameters is not None and hasattr(m_parameters, 'empty') and not m_parameters.empty:
+        for param in m_parameters.to_dict('records'):
             document.add_paragraph(f"Name: {param.get('name', 'N/A')}, Value: {param.get('value', 'N/A')}")
     else:
         document.add_paragraph("No M parameters available.")
 
     # Add DAX Tables
     document.add_heading('DAX Tables', level=1)
-    if report_data.get("dax_tables") is not None and not report_data.get("dax_tables").empty:
-         for table in report_data["dax_tables"].to_dict('records'):
+    dax_tables = report_data.get("dax_tables")
+    if dax_tables is not None and hasattr(dax_tables, 'empty') and not dax_tables.empty:
+         for table in dax_tables.to_dict('records'):
             document.add_paragraph(f"Name: {table.get('name', 'N/A')}")
             if table.get('expression'):
                  document.add_paragraph("Expression:")
@@ -78,8 +85,9 @@ def generate_word_doc(report_data):
 
     # Add DAX Measures
     document.add_heading('DAX Measures', level=1)
-    if report_data.get("dax_measures") is not None and not report_data.get("dax_measures").empty:
-        for measure in report_data["dax_measures"].to_dict('records'):
+    dax_measures = report_data.get("dax_measures")
+    if dax_measures is not None and hasattr(dax_measures, 'empty') and not dax_measures.empty:
+        for measure in dax_measures.to_dict('records'):
             document.add_paragraph(f"Name: {measure.get('name', 'N/A')}")
             if measure.get('expression'):
                 document.add_paragraph("Expression:")
@@ -124,16 +132,18 @@ def generate_pdf_doc(report_data):
 
     # Add Metadata
     y_position = draw_text("Metadata", 100, y_position, size=14, bold=True)
-    if report_data.get("metadata"):
-        for key, value in report_data["metadata"].items():
+    metadata = report_data.get("metadata")
+    if metadata:
+        for key, value in metadata.items():
             y_position = draw_paragraph(f"{key}: {value}", 100, y_position)
     else:
         y_position = draw_paragraph("No metadata available.", 100, y_position)
 
     # Add Schema
     y_position = draw_text("Schema", 100, y_position, size=14, bold=True)
-    if report_data.get("schema"):
-        for table in report_data["schema"]:
+    schema = report_data.get("schema")
+    if schema:
+        for table in schema:
             y_position = draw_text(f"Table: {table.get('name', 'N/A')}", 100, y_position, size=12, bold=True)
             if table.get("columns"):
                 y_position = draw_text("Columns:", 100, y_position, size=10)
@@ -146,16 +156,18 @@ def generate_pdf_doc(report_data):
 
     # Add Relationships
     y_position = draw_text("Relationships", 100, y_position, size=14, bold=True)
-    if report_data.get("relationships") is not None and not report_data.get("relationships").empty:
-        for rel in report_data["relationships"].to_dict('records'):
+    relationships = report_data.get("relationships")
+    if relationships is not None and hasattr(relationships, 'empty') and not relationships.empty:
+        for rel in relationships.to_dict('records'):
             y_position = draw_paragraph(f"From Table: {rel.get('fromTable', 'N/A')}, From Column: {rel.get('fromColumn', 'N/A')}, To Table: {rel.get('toTable', 'N/A')}, To Column: {rel.get('toColumn', 'N/A')}", 100, y_position)
     else:
         y_position = draw_paragraph("No relationships available.", 100, y_position)
 
     # Add Power Query Code
     y_position = draw_text("Power Query Code", 100, y_position, size=14, bold=True)
-    if report_data.get("power_query") is not None and not report_data.get("power_query").empty:
-        for pq in report_data["power_query"].to_dict('records'):
+    power_query = report_data.get("power_query")
+    if power_query is not None and hasattr(power_query, 'empty') and not power_query.empty:
+        for pq in power_query.to_dict('records'):
             y_position = draw_paragraph(f"Name: {pq.get('name', 'N/A')}", 100, y_position)
             if pq.get('expression'):
                 y_position = draw_text("Expression:", 100, y_position, size=10)
@@ -165,16 +177,18 @@ def generate_pdf_doc(report_data):
 
     # Add M Parameters
     y_position = draw_text("M Parameters", 100, y_position, size=14, bold=True)
-    if report_data.get("m_parameters") is not None and not report_data.get("m_parameters").empty:
-        for param in report_data["m_parameters"].to_dict('records'):
+    m_parameters = report_data.get("m_parameters")
+    if m_parameters is not None and hasattr(m_parameters, 'empty') and not m_parameters.empty:
+        for param in m_parameters.to_dict('records'):
             y_position = draw_paragraph(f"Name: {param.get('name', 'N/A')}, Value: {param.get('value', 'N/A')}", 100, y_position)
     else:
         y_position = draw_paragraph("No M parameters available.", 100, y_position)
 
     # Add DAX Tables
     y_position = draw_text("DAX Tables", 100, y_position, size=14, bold=True)
-    if report_data.get("dax_tables") is not None and not report_data.get("dax_tables").empty:
-         for table in report_data["dax_tables"].to_dict('records'):
+    dax_tables = report_data.get("dax_tables")
+    if dax_tables is not None and hasattr(dax_tables, 'empty') and not dax_tables.empty:
+         for table in dax_tables.to_dict('records'):
             y_position = draw_paragraph(f"Name: {table.get('name', 'N/A')}", 100, y_position)
             if table.get('expression'):
                  y_position = draw_text("Expression:", 100, y_position, size=10)
@@ -184,8 +198,9 @@ def generate_pdf_doc(report_data):
 
     # Add DAX Measures
     y_position = draw_text("DAX Measures", 100, y_position, size=14, bold=True)
-    if report_data.get("dax_measures") is not None and not report_data.get("dax_measures").empty:
-        for measure in report_data["dax_measures"].to_dict('records'):
+    dax_measures = report_data.get("dax_measures")
+    if dax_measures is not None and hasattr(dax_measures, 'empty') and not dax_measures.empty:
+        for measure in dax_measures.to_dict('records'):
             y_position = draw_paragraph(f"Name: {measure.get('name', 'N/A')}", 100, y_position)
             if measure.get('expression'):
                 y_position = draw_text("Expression:", 100, y_position, size=10)
@@ -278,6 +293,7 @@ def main():
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+            st.error(traceback.format_exc()) # Print the full traceback
             # Ensure temporary file is removed even if an error occurs
             if 'tmp_pbix_path' in locals() and os.path.exists(tmp_pbix_path):
                 os.remove(tmp_pbix_path)
