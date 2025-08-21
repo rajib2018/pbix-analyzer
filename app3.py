@@ -6,6 +6,7 @@ import os
 from docx import Document
 from io import BytesIO
 from fpdf import FPDF
+from pbixray.core import PBIXRay
 
 # Function to run pbixray
 def run_pbixray(pbix_file_path):
