@@ -4,3 +4,4 @@ python-docx
 reportlab
 pandas
 xlsxwriter
+fpdf
