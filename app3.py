@@ -13,7 +13,7 @@ def run_pbixray(pbix_file_path):
     """Runs pbixray on the given file and returns the parsed JSON output."""
     try:
         # Construct the command to run pbixray
-        command = ["pbixray", "-f", pbix_file_path]
+        command = ["PBIXRay", "-f", pbix_file_path]
 
         # Run the command and capture the output
         result = subprocess.run(command, capture_output=True, text=True, check=True)
