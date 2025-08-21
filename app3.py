@@ -1,19 +1,28 @@
+# %%writefile /content/app2.py
+%pip install streamlit pbixray python-docx fpdf
+
 import streamlit as st
 import subprocess
 import json
 import pandas as pd
 import os
+import sys
 from docx import Document
 from io import BytesIO
 from fpdf import FPDF
-from pbixray.core import PBIXRay
 
 # Function to run pbixray
 def run_pbixray(pbix_file_path):
     """Runs pbixray on the given file and returns the parsed JSON output."""
     try:
         # Construct the command to run pbixray
-        command = ["PBIXRay", "-f", pbix_file_path]
+        # Find the pbixray executable in the current environment's PATH
+        pbixray_executable = "pbixray"
+        if sys.platform == "win32":
+            pbixray_executable += ".exe"
+
+        # Check if the executable exists in the common install locations or PATH
+        command = [pbixray_executable, "-f", pbix_file_path]
 
         # Run the command and capture the output
         result = subprocess.run(command, capture_output=True, text=True, check=True)
@@ -23,14 +32,15 @@ def run_pbixray(pbix_file_path):
         return parsed_output
 
     except FileNotFoundError:
-        st.error("Error: pbixray command not found. Make sure pbixray is installed and in your PATH.")
+        st.error(f"Error: {pbixray_executable} command not found. Make sure pbixray is installed and in your PATH.")
+        st.info("You might need to restart the Colab runtime after installing libraries.")
         return None
     except subprocess.CalledProcessError as e:
-        st.error(f"Error running pbixray: {e}")
+        st.error(f"Error running {pbixray_executable}: {e}")
         st.error(f"Stderr: {e.stderr}")
         return None
     except json.JSONDecodeError:
-        st.error("Error decoding JSON output from pbixray.")
+        st.error(f"Error decoding JSON output from {pbixray_executable}. Please check the output format.")
         return None
 
 # Functions to display different sections
