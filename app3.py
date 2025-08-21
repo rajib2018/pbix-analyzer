@@ -1,6 +1,3 @@
-# %%writefile /content/app2.py
-%pip install streamlit pbixray python-docx fpdf
-
 import streamlit as st
 import subprocess
 import json
