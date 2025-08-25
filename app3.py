@@ -36,7 +36,29 @@ def process_pbix_file(uploaded_file):
             # extracted_data["M Parameters"] = unpacker.m_parameters
             # extracted_data["DAX Tables"] = unpacker.dax_tables
             # extracted_data["DAX Measures"] = unpacker.dax_measures
-            extracted_data["Data Model"] = unpacker.data_model # Access the data_model
+
+            # Access the data_model with error handling
+            try:
+                extracted_data["Data Model"] = unpacker.data_model
+                st.write("Successfully accessed Data Model.")
+                # Add some debugging info about the data_model structure
+                if extracted_data["Data Model"] and hasattr(extracted_data["Data Model"], 'model'):
+                     st.write("Data Model has 'model' attribute.")
+                     if hasattr(extracted_data["Data Model"].model, 'tables'):
+                         st.write("Data Model.model has 'tables' attribute.")
+                         st.write(f"Number of tables found: {len(extracted_data['Data Model'].model.tables)}")
+                     else:
+                         st.warning("Data Model.model does NOT have 'tables' attribute.")
+                else:
+                     st.warning("Data Model does NOT have 'model' attribute or is None.")
+
+            except AttributeError as ae:
+                st.error(f"AttributeError accessing data_model: {ae}")
+                extracted_data["Data Model"] = None # Ensure Data Model is None on error
+            except Exception as e:
+                st.error(f"An unexpected error occurred accessing data_model: {e}")
+                extracted_data["Data Model"] = None # Ensure Data Model is None on error
+
 
             # Extract actual data for tables
             table_data = {}
@@ -61,7 +83,9 @@ def process_pbix_file(uploaded_file):
             st.error(traceback.format_exc())
             return None
         finally:
-            os.remove(tmp_file_path)
+            # Ensure temporary file is removed even if an error occurs
+            if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+                os.remove(tmp_file_path)
     return None
 
 def display_extracted_data(extracted_data):
