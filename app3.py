@@ -28,13 +28,14 @@ def process_pbix_file(uploaded_file):
             unpacker = pbixray.pbix_unpacker.PbixUnpacker(tmp_file_path)
 
             extracted_data = {}
-            extracted_data["Metadata"] = unpacker.metadata
-            extracted_data["Schema"] = unpacker.schema # Keeping this for compatibility, but will prioritize data_model for details
-            extracted_data["Relationships"] = unpacker.relationships
-            extracted_data["Power Query"] = unpacker.power_query
-            extracted_data["M Parameters"] = unpacker.m_parameters
-            extracted_data["DAX Tables"] = unpacker.dax_tables
-            extracted_data["DAX Measures"] = unpacker.dax_measures
+            # Remove lines that access attributes not present on PbixUnpacker
+            # extracted_data["Metadata"] = unpacker.metadata
+            # extracted_data["Schema"] = unpacker.schema # Keeping this for compatibility, but will prioritize data_model for details
+            # extracted_data["Relationships"] = unpacker.relationships
+            # extracted_data["Power Query"] = unpacker.power_query
+            # extracted_data["M Parameters"] = unpacker.m_parameters
+            # extracted_data["DAX Tables"] = unpacker.dax_tables
+            # extracted_data["DAX Measures"] = unpacker.dax_measures
             extracted_data["Data Model"] = unpacker.data_model # Access the data_model
 
             # Extract actual data for tables
