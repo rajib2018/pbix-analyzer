@@ -28,50 +28,40 @@ def process_pbix_file(uploaded_file):
             unpacker = pbixray.pbix_unpacker.PbixUnpacker(tmp_file_path)
 
             extracted_data = {}
-            # Removed lines that access attributes not present on PbixUnpacker
-            # extracted_data["Metadata"] = unpacker.metadata
-            # extracted_data["Schema"] = unpacker.schema
-            # extracted_data["Relationships"] = unpacker.relationships
-            # extracted_data["Power Query"] = unpacker.power_query
-            # extracted_data["M Parameters"] = unpacker.m_parameters
-            # extracted_data["DAX Tables"] = unpacker.dax_tables
-            # extracted_data["DAX Measures"] = unpacker.dax_measures
-
-            # Access the data_model with error handling
+            # Access attributes directly from the PbixUnpacker object
+            # Add error handling for each attribute access as they might not always be present
             try:
-                extracted_data["Data Model"] = unpacker.data_model
-                st.write("Successfully accessed Data Model object (might not contain full model structure).")
-                # Add some debugging info about the data_model structure
-                if extracted_data["Data Model"]:
-                    st.write(f"Type of unpacker.data_model: {type(extracted_data['Data Model'])}")
-                    # Introspect the data_model object to find the tables attribute
-                    st.write("Introspecting Data Model object attributes:")
-                    st.write([attr for attr in dir(extracted_data["Data Model"]) if not attr.startswith('_')])
+                extracted_data["Metadata"] = unpacker.metadata
+            except AttributeError:
+                extracted_data["Metadata"] = "Not available"
+            try:
+                extracted_data["Schema"] = unpacker.schema
+            except AttributeError:
+                extracted_data["Schema"] = "Not available"
+            try:
+                extracted_data["Relationships"] = unpacker.relationships
+            except AttributeError:
+                extracted_data["Relationships"] = "Not available"
+            try:
+                extracted_data["Power Query"] = unpacker.power_query
+            except AttributeError:
+                extracted_data["Power Query"] = "Not available"
+            try:
+                extracted_data["M Parameters"] = unpacker.m_parameters
+            except AttributeError:
+                extracted_data["M Parameters"] = "Not available"
+            try:
+                extracted_data["DAX Tables"] = unpacker.dax_tables
+            except AttributeError:
+                extracted_data["DAX Tables"] = "Not available"
+            try:
+                extracted_data["DAX Measures"] = unpacker.dax_measures
+            except AttributeError:
+                extracted_data["DAX Measures"] = "Not available"
 
-            except AttributeError as ae:
-                st.error(f"AttributeError accessing data_model or its attributes: {ae}")
-                extracted_data["Data Model"] = None # Ensure Data Model is None on error
-            except Exception as e:
-                st.error(f"An unexpected error occurred accessing data_model: {e}")
-                extracted_data["Data Model"] = None # Ensure Data Model is None on error
-
-
-            # Extract actual data for tables
-            table_data = {}
-            # Only attempt to process tables if data_model and its components are available
-            # Corrected access to tables directly from data_model, based on previous introspection
-            if extracted_data["Data Model"] and hasattr(extracted_data["Data Model"], 'tables') and extracted_data["Data Model"].tables:
-                 for table in extracted_data["Data Model"].tables:
-                    try:
-                        # As determined in the previous step, pbixray.data_model does not support
-                        # direct extraction of table data into DataFrames.
-                        # We will store a placeholder indicating this limitation.
-                        table_data[table.name] = pd.DataFrame({"Status": [f"Data extraction for {table.name} not supported by pbixray.data_model for direct viewing."]})
-
-                    except Exception as data_e:
-                        table_data[table.name] = pd.DataFrame({"Error": [f"Could not extract data for {table.name}: {data_e}"]})
-
-            extracted_data["Table Data"] = table_data # Store the extracted (or placeholder) data
+            # The 'data_model' attribute provides lower-level access and doesn't have
+            # the structured schema information directly. We will not use it for schema display.
+            # extracted_data["Data Model"] = unpacker.data_model # Not using for schema/table listing
 
             st.success("PBIX file processed successfully!")
             return extracted_data
@@ -91,9 +81,6 @@ def display_extracted_data(extracted_data):
     if extracted_data:
         st.header("Extracted Information")
         for section, data in extracted_data.items():
-            # Skip Data Model and Table Data here, as they are handled separately
-            if section in ["Data Model", "Table Data"]:
-                continue
             st.subheader(section)
             if isinstance(data, (dict, list)):
                 st.json(data)
@@ -104,7 +91,8 @@ def display_extracted_data(extracted_data):
 def generate_excel_doc(data):
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-    worksheet = workbook.add_worksheet("PBIX Data")
+    # Use a single worksheet for simplicity or iterate through data sections
+    worksheet = workbook.add_worksheet("PBIX Data Summary")
 
     row = 0
     for section, content in data.items():
@@ -114,18 +102,25 @@ def generate_excel_doc(data):
             try:
                 # Attempt to flatten complex structures for Excel
                 df = pd.json_normalize(content)
-                df.to_excel(workbook, sheet_name="PBIX Data", startrow=row, index=False, header=True)
-                row += len(df) + 2 # Add some space after the table
+                # Write to a new sheet for each section if feasible, or flatten
+                # For simplicity, writing string representation to the summary sheet
+                worksheet.write(row, 1, str(content))
+                row += 1
+                # If writing to separate sheets:
+                # sheet_name = section[:31].replace(' ', '_').replace('-', '_') # Sanitize sheet name
+                # df.to_excel(workbook, sheet_name=sheet_name, index=False)
             except Exception as e:
                 worksheet.write(row, 1, f"Could not display complex data: {e}")
-                row += 2
-        # Handle DataFrame specifically if we were able to extract table data
+                row += 1
+        # Handle DataFrame specifically if we were able to extract table data (not currently supported by pbixray.data_model)
         elif isinstance(content, pd.DataFrame):
-             content.to_excel(workbook, sheet_name="PBIX Data", startrow=row, index=False, header=True)
-             row += len(content) + 2
+             # Convert DataFrame to string for simplicity in summary sheet
+             worksheet.write(row, 1, content.to_string())
+             row += 1
         else:
             worksheet.write(row, 1, str(content))
-            row += 2
+            row += 1
+        row += 1 # Add a blank row between sections
 
     workbook.close()
     output.seek(0)
@@ -142,8 +137,8 @@ def generate_word_doc(data):
             # Convert complex data to a string representation
             document.add_paragraph(str(content))
         elif isinstance(content, pd.DataFrame):
-            # Attempt to add DataFrame to Word
-            document.add_paragraph(content.to_string()) # Convert DataFrame to string for simplicity
+            # Attempt to add DataFrame to Word (as string)
+            document.add_paragraph(content.to_string())
         else:
             document.add_paragraph(str(content))
 
@@ -157,54 +152,92 @@ def generate_pdf_doc(data):
     output = io.BytesIO()
     c = canvas.Canvas(output, pagesize=letter)
     width, height = letter
+    margin = 50
+    y_position = height - margin
+    line_height = 14
+    section_spacing = 20
 
-    c.drawString(100, height - 50, "PBIX Extracted Data")
-    y_position = height - 100
+    def draw_string_with_wrap(text, x, y, max_width, font_name='Helvetica', font_size=12):
+        from reportlab.platypus import SimpleDocTemplate, Paragraph
+        from reportlab.lib.styles import getSampleStyleSheet
 
-    for section, content in data.items():
-        c.drawString(100, y_position, f"Section: {section}")
-        y_position -= 20
-        if isinstance(content, (dict, list)):
-            # Convert complex data to a string representation for PDF
-            content_str = str(content)
-            # Split content string if it's too long to fit on one line
+        style = getSampleStyleSheet()['Normal']
+        style.fontName = font_name
+        style.fontSize = font_size
+        story = [Paragraph(text, style)]
+
+        buffer = io.BytesIO()
+        # Create a temporary SimpleDocTemplate to calculate text flow
+        temp_doc = SimpleDocTemplate(buffer, pagesize=letter,
+                                     leftMargin=x, rightMargin=width - x - max_width,
+                                     topMargin=height - y, bottomMargin=margin)
+        try:
+            # Build the story to calculate height
+            temp_doc.build(story)
+            # We can't easily get line by line position from here, so we'll do basic word wrap
             lines = []
             current_line = ""
-            for word in content_str.split():
-                if c.stringWidth(current_line + word, 'Helvetica', 12) < width - 200:
+            for word in text.split():
+                # Estimate width (this is a simplification, reportlab's flowables are better)
+                if c.stringWidth(current_line + word + " ", font_name, font_size) < max_width:
                     current_line += word + " "
                 else:
-                    lines.append(current_line)
+                    lines.append(current_line.strip())
                     current_line = word + " "
-            lines.append(current_line)
+            lines.append(current_line.strip())
 
+            current_y = y
             for line in lines:
-                c.drawString(120, y_position, line)
-                y_position -= 15
-                if y_position < 50: # Check if new page is needed
+                if current_y < margin:
                     c.showPage()
-                    c.drawString(100, height - 50, "PBIX Extracted Data (cont.)")
-                    y_position = height - 100
-        elif isinstance(content, pd.DataFrame):
-             # Convert DataFrame to string and add to PDF
-             content_str = content.to_string()
-             lines = content_str.split('\n')
-             for line in lines:
-                 c.drawString(120, y_position, line)
-                 y_position -= 15
-                 if y_position < 50: # Check if new page is needed
-                     c.showPage()
-                     c.drawString(100, height - 50, "PBIX Extracted Data (cont.)")
-                     y_position = height - 100
-        else:
-            c.drawString(120, y_position, str(content))
-            y_position -= 15
+                    current_y = height - margin
+                c.drawString(x, current_y, line)
+                current_y -= line_height
+            return current_y # Return the final y position
+        except Exception as e:
+            # Fallback if Paragraph fails or for simplicity
+            c.drawString(x, y, "Error rendering content: " + str(e))
+            return y - line_height
 
-        y_position -= 20 # Space between sections
-        if y_position < 50: # Check if new page is needed before next section
+    c.drawString(margin, y_position, "PBIX Extracted Data")
+    y_position -= section_spacing
+
+    for section, content in data.items():
+        if y_position < margin:
             c.showPage()
-            c.drawString(100, height - 50, "PBIX Extracted Data (cont.)")
-            y_position = height - 100
+            y_position = height - margin
+            c.drawString(margin, y_position, "PBIX Extracted Data (cont.)")
+            y_position -= section_spacing
+
+        c.drawString(margin, y_position, f"Section: {section}")
+        y_position -= line_height
+
+        content_str = str(content) # Convert all content to string for PDF display
+
+        # Implement simple word wrapping
+        lines = []
+        current_line = ""
+        max_width = width - 2 * margin # Calculate available width
+        for word in content_str.split():
+             # Add a space before the word unless it's the first word
+             test_line = current_line + (" " if current_line else "") + word
+             if c.stringWidth(test_line, 'Helvetica', 12) < max_width:
+                 current_line = test_line
+             else:
+                 lines.append(current_line)
+                 current_line = word
+        lines.append(current_line) # Add the last line
+
+        for line in lines:
+            if y_position < margin:
+                c.showPage()
+                y_position = height - margin
+                c.drawString(margin, y_position, f"Section: {section} (cont.)")
+                y_position -= line_height
+            c.drawString(margin + 20, y_position, line) # Indent content
+            y_position -= line_height
+
+        y_position -= section_spacing # Space after section content
 
 
     c.save()
@@ -223,56 +256,53 @@ def main():
         extracted_data = process_pbix_file(uploaded_file)
 
         if extracted_data:
-            # Display schema details from Data Model
-            st.header("Schema Details (from Data Model)")
-            data_model = extracted_data.get("Data Model")
+            # Display schema details from the 'Schema' attribute provided by PbixUnpacker
+            st.header("Schema Details")
+            schema_data = extracted_data.get("Schema")
 
-            # Corrected access to tables directly from data_model, based on previous introspection
-            if data_model and hasattr(data_model, 'tables') and data_model.tables:
-                tables = data_model.tables
-                schema_details = {}
+            if schema_data and isinstance(schema_data, dict):
+                st.json(schema_data)
+
+                # Attempt to get table names from the Schema data for the dropdown
                 schema_names = []
-                for table in tables:
-                    # Assuming table objects have 'name' and 'columns' attributes
-                    if hasattr(table, 'name') and hasattr(table, 'columns'):
-                        schema_details[table.name] = {
-                            "Columns": [{
-                                "Name": col.name,
-                                "DataType": col.data_type,
-                                "isHidden": col.is_hidden,
-                                "FormatString": col.format_string
-                            } for col in table.columns] if hasattr(table, 'columns') else [],
-                            "Measures": [{
-                                "Name": measure.name,
-                                "Expression": measure.expression,
-                                "isHidden": measure.is_hidden,
-                                "FormatString": measure.format_string
-                            } for measure in table.measures] if hasattr(table, 'measures') else []
-                        }
-                        schema_names.append(table.name)
-                    else:
-                        st.warning(f"Skipping unexpected table object structure: {type(table)}")
+                # The structure of 'schema_data' needs to be inspected.
+                # Based on typical schema representations, it might contain a list or dict of tables.
+                # Let's assume it's a dictionary where keys are table names or similar identifiers.
+                # If it's a list of table objects, we'd need to iterate and access a 'name' attribute.
+                # For now, assume it's a dict and keys are names.
+                try:
+                    schema_names = list(schema_data.keys())
+                except Exception as e:
+                    st.warning(f"Could not extract schema names from Schema data: {e}")
+                    schema_names = [] # Ensure it's an empty list on error
 
 
                 if schema_names:
-                    st.json(schema_details)
-
-                    # Add selectbox for schema selection
                     st.subheader("Select a Schema to View Data")
+                    # Data viewing is not supported by pbixray.data_model, so dropdown is for context
                     selected_schema = st.selectbox("Choose a schema", ["--Select--"] + schema_names)
 
-                    # Display selected schema data (Still a placeholder due to pbixray limitations)
                     if selected_schema and selected_schema != "--Select--":
-                         st.subheader(f"Data for Schema: {selected_schema}")
-                         st.info(f"Data extraction for schema '{selected_schema}' is not directly supported by the current pbixray data model object for viewing.")
+                         st.subheader(f"Selected Schema Details: {selected_schema}")
+                         # Display details for the selected schema if available in schema_data
+                         if selected_schema in schema_data:
+                             st.json(schema_data[selected_schema])
+                         else:
+                             st.info(f"Details for schema '{selected_schema}' not found in extracted Schema data.")
 
+                         # Placeholder for data viewing (not supported)
+                         st.info(f"Direct data extraction for schema '{selected_schema}' is not supported by the current pbixray library for viewing.")
+
+                else:
+                     st.info("No schema names found to display in dropdown.")
+            elif schema_data == "Not available":
+                 st.info("Schema information is not available in the PBIX file.")
             else:
-                st.info("Could not extract Data Model details or no tables were found. Ensure the uploaded PBIX file is valid and contains a data model.")
+                st.info("Could not extract Schema details in expected format.")
 
 
-            # Display other extracted data (excluding Data Model)
-            # Keep Table Data in extracted_data but don't display here as it's placeholder
-            display_extracted_data({k: v for k, v in extracted_data.items() if k not in ["Data Model", "Table Data"]})
+            # Display other extracted data (excluding Schema, which is handled above)
+            display_extracted_data({k: v for k, v in extracted_data.items() if k != "Schema"})
 
             # Add download buttons
             st.sidebar.header("Download Output")
