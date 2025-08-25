@@ -40,20 +40,28 @@ def process_pbix_file(uploaded_file):
             # Access the data_model with error handling
             try:
                 extracted_data["Data Model"] = unpacker.data_model
-                st.write("Successfully accessed Data Model.")
+                st.write("Successfully accessed Data Model object (might not contain full model structure).")
                 # Add some debugging info about the data_model structure
-                if extracted_data["Data Model"] and hasattr(extracted_data["Data Model"], 'model'):
-                     st.write("Data Model has 'model' attribute.")
-                     if hasattr(extracted_data["Data Model"].model, 'tables'):
-                         st.write("Data Model.model has 'tables' attribute.")
-                         st.write(f"Number of tables found: {len(extracted_data['Data Model'].model.tables)}")
-                     else:
-                         st.warning("Data Model.model does NOT have 'tables' attribute.")
+                if extracted_data["Data Model"]:
+                    st.write(f"Type of unpacker.data_model: {type(extracted_data['Data Model'])}")
+                    if hasattr(extracted_data["Data Model"], 'model'):
+                         st.write("Data Model has 'model' attribute.")
+                         if hasattr(extracted_data["Data Model"].model, 'tables'):
+                             st.write("Data Model.model has 'tables' attribute.")
+                             if extracted_data["Data Model"].model.tables:
+                                 st.write(f"Number of tables found: {len(extracted_data['Data Model'].model.tables)}")
+                             else:
+                                st.warning("Data Model.model.tables is empty.")
+                         else:
+                             st.warning("Data Model.model does NOT have 'tables' attribute.")
+                    else:
+                         st.warning("Data Model does NOT have 'model' attribute.")
                 else:
-                     st.warning("Data Model does NOT have 'model' attribute or is None.")
+                     st.warning("unpacker.data_model is None.")
+
 
             except AttributeError as ae:
-                st.error(f"AttributeError accessing data_model: {ae}")
+                st.error(f"AttributeError accessing data_model or its attributes: {ae}")
                 extracted_data["Data Model"] = None # Ensure Data Model is None on error
             except Exception as e:
                 st.error(f"An unexpected error occurred accessing data_model: {e}")
@@ -62,6 +70,7 @@ def process_pbix_file(uploaded_file):
 
             # Extract actual data for tables
             table_data = {}
+            # Only attempt to process tables if data_model and its components are available
             if extracted_data["Data Model"] and hasattr(extracted_data["Data Model"], 'model') and hasattr(extracted_data["Data Model"].model, 'tables'):
                  for table in extracted_data["Data Model"].model.tables:
                     try:
@@ -230,50 +239,47 @@ def main():
             data_model = extracted_data.get("Data Model")
             table_data = extracted_data.get("Table Data", {}) # Get table data dictionary
 
-            if data_model and hasattr(data_model, 'model') and hasattr(data_model.model, 'tables'):
+            if data_model and hasattr(data_model, 'model') and hasattr(data_model.model, 'tables') and data_model.model.tables:
                 tables = data_model.model.tables
-                if tables:
-                    schema_details = {}
-                    schema_names = []
-                    for table in tables:
-                        schema_details[table.name] = {
-                            "Columns": [{
-                                "Name": col.name,
-                                "DataType": col.data_type,
-                                "isHidden": col.is_hidden,
-                                "FormatString": col.format_string
-                            } for col in table.columns],
-                            "Measures": [{
-                                "Name": measure.name,
-                                "Expression": measure.expression,
-                                "isHidden": measure.is_hidden,
-                                "FormatString": measure.format_string
-                            } for measure in table.measures] if hasattr(table, 'measures') else []
-                        }
-                        schema_names.append(table.name)
+                schema_details = {}
+                schema_names = []
+                for table in tables:
+                    schema_details[table.name] = {
+                        "Columns": [{
+                            "Name": col.name,
+                            "DataType": col.data_type,
+                            "isHidden": col.is_hidden,
+                            "FormatString": col.format_string
+                        } for col in table.columns],
+                        "Measures": [{
+                            "Name": measure.name,
+                            "Expression": measure.expression,
+                            "isHidden": measure.is_hidden,
+                            "FormatString": measure.format_string
+                        } for measure in table.measures] if hasattr(table, 'measures') else []
+                    }
+                    schema_names.append(table.name)
 
-                    st.json(schema_details)
+                st.json(schema_details)
 
-                    # Add selectbox for schema selection
-                    if schema_names:
-                        st.subheader("Select a Schema to View Data")
-                        selected_schema = st.selectbox("Choose a schema", ["--Select--"] + schema_names)
+                # Add selectbox for schema selection
+                if schema_names:
+                    st.subheader("Select a Schema to View Data")
+                    selected_schema = st.selectbox("Choose a schema", ["--Select--"] + schema_names)
 
-                        # Display selected schema data
-                        if selected_schema and selected_schema != "--Select--":
-                             st.subheader(f"Data for Schema: {selected_schema}")
-                             if selected_schema in table_data:
-                                 data_df = table_data[selected_schema]
-                                 if not data_df.empty:
-                                     st.dataframe(data_df)
-                                 else:
-                                     st.info(f"No data available to display for schema '{selected_schema}'.")
+                    # Display selected schema data
+                    if selected_schema and selected_schema != "--Select--":
+                         st.subheader(f"Data for Schema: {selected_schema}")
+                         if selected_schema in table_data:
+                             data_df = table_data[selected_schema]
+                             if not data_df.empty:
+                                 st.dataframe(data_df)
                              else:
-                                st.warning(f"Data for schema '{selected_schema}' was not found in extracted data.")
-                else:
-                     st.info("No tables found in the Data Model.")
+                                 st.info(f"No data available to display for schema '{selected_schema}'.")
+                         else:
+                            st.warning(f"Data for schema '{selected_schema}' was not found in extracted data.")
             else:
-                st.info("Could not extract Data Model details.")
+                st.info("Could not extract Data Model details or no tables were found. Ensure the uploaded PBIX file is valid and contains a data model.")
 
 
             # Display other extracted data (excluding Data Model and Table Data)
