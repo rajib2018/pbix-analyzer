@@ -28,61 +28,15 @@ def process_pbix_file(uploaded_file):
             unpacker = pbixray.pbix_unpacker.PbixUnpacker(tmp_file_path)
 
             extracted_data = {}
-            # Remove lines that access attributes not present on PbixUnpacker
-            # extracted_data["Metadata"] = unpacker.metadata # Removed as it caused AttributeError
-            # extracted_data["Schema"] = unpacker.schema # Removed as it caused AttributeError
-            # extracted_data["Relationships"] = unpacker.relationships # Removed as it caused AttributeError
-            # extracted_data["Power Query"] = unpacker.power_query # Removed as it caused AttributeError
-            # extracted_data["M Parameters"] = unpacker.m_parameters # Removed as it caused AttributeError
-            # extracted_data["DAX Tables"] = unpacker.dax_tables # Removed as it caused AttributeError
-            # extracted_data["DAX Measures"] = unpacker.dax_measures # Removed as it caused AttributeError
-
-            # Access the data_model with error handling
-            try:
-                extracted_data["Data Model"] = unpacker.data_model
-                st.write("Successfully accessed Data Model object (might not contain full model structure).")
-                # Add some debugging info about the data_model structure
-                if extracted_data["Data Model"]:
-                    st.write(f"Type of unpacker.data_model: {type(extracted_data['Data Model'])}")
-                    if hasattr(extracted_data["Data Model"], 'model'):
-                         st.write("Data Model has 'model' attribute.")
-                         if hasattr(extracted_data["Data Model"].model, 'tables'):
-                             st.write("Data Model.model has 'tables' attribute.")
-                             if extracted_data["Data Model"].model.tables:
-                                 st.write(f"Number of tables found: {len(extracted_data['Data Model'].model.tables)}")
-                             else:
-                                st.warning("Data Model.model.tables is empty.")
-                         else:
-                             st.warning("Data Model.model does NOT have 'tables' attribute.")
-                    else:
-                         st.warning("Data Model does NOT have 'model' attribute.")
-                else:
-                     st.warning("unpacker.data_model is None.")
-
-
-            except AttributeError as ae:
-                st.error(f"AttributeError accessing data_model or its attributes: {ae}")
-                extracted_data["Data Model"] = None # Ensure Data Model is None on error
-            except Exception as e:
-                st.error(f"An unexpected error occurred accessing data_model: {e}")
-                extracted_data["Data Model"] = None # Ensure Data Model is None on error
-
-
-            # Extract actual data for tables
-            table_data = {}
-            # Only attempt to process tables if data_model and its components are available
-            if extracted_data["Data Model"] and hasattr(extracted_data["Data Model"], 'tables') and extracted_data["Data Model"].tables: # Corrected access to tables
-                 for table in extracted_data["Data Model"].tables:
-                    try:
-                        # As determined in the previous step, pbixray.data_model does not support
-                        # direct extraction of table data into DataFrames.
-                        # We will store a placeholder indicating this limitation.
-                        table_data[table.name] = pd.DataFrame({"Status": [f"Data extraction for {table.name} not supported by pbixray.data_model for direct viewing."]})
-
-                    except Exception as data_e:
-                        table_data[table.name] = pd.DataFrame({"Error": [f"Could not extract data for {table.name}: {data_e}"]})
-
-            extracted_data["Table Data"] = table_data # Store the extracted (or placeholder) data
+            # The pbixray.PbixUnpacker object provides direct attributes for different sections:
+            extracted_data["Metadata"] = unpacker.metadata
+            extracted_data["Schema"] = unpacker.schema
+            extracted_data["Relationships"] = unpacker.relationships
+            extracted_data["Power Query"] = unpacker.power_query
+            extracted_data["M Parameters"] = unpacker.m_parameters
+            extracted_data["DAX Tables"] = unpacker.dax_tables
+            extracted_data["DAX Measures"] = unpacker.dax_measures
+            extracted_data["Data Model"] = unpacker.data_model
 
             st.success("PBIX file processed successfully!")
             return extracted_data
@@ -238,41 +192,67 @@ def main():
             st.header("Schema Details (from Data Model)")
             data_model = extracted_data.get("Data Model")
 
-            if data_model and hasattr(data_model, 'tables') and data_model.tables: # Corrected access to tables
-                tables = data_model.tables
-                schema_details = {}
-                schema_names = []
-                for table in tables:
-                    schema_details[table.name] = {
-                        "Columns": [{
-                            "Name": col.name,
-                            "DataType": col.data_type,
-                            "isHidden": col.is_hidden,
-                            "FormatString": col.format_string
-                        } for col in table.columns],
-                        "Measures": [{
-                            "Name": measure.name,
-                            "Expression": measure.expression,
-                            "isHidden": measure.is_hidden,
-                            "FormatString": measure.format_string
-                        } for measure in table.measures] if hasattr(table, 'measures') else []
-                    }
-                    schema_names.append(table.name)
+            if data_model:
+                # Introspect the data_model object to find the tables attribute
+                st.write("Introspecting Data Model object attributes:")
+                st.write([attr for attr in dir(data_model) if not attr.startswith('_')])
 
-                st.json(schema_details)
+                # Based on the pbixray structure and common patterns, the tables might be
+                # directly accessible as an attribute or through a method.
+                # Let's try accessing a common attribute name like 'tables' or 'entities'.
+                tables = None
+                if hasattr(data_model, 'tables'):
+                    tables = data_model.tables
+                    st.write("Found 'tables' attribute on Data Model.")
+                elif hasattr(data_model, 'entities'): # Sometimes tables are called entities
+                    tables = data_model.entities
+                    st.write("Found 'entities' attribute on Data Model.")
+                else:
+                    st.warning("Could not find 'tables' or 'entities' attribute on Data Model.")
 
-                # Add selectbox for schema selection
-                if schema_names:
-                    st.subheader("Select a Schema to View Data")
-                    selected_schema = st.selectbox("Choose a schema", ["--Select--"] + schema_names)
 
-                    # Display selected schema data (Still a placeholder due to pbixray limitations)
-                    if selected_schema and selected_schema != "--Select--":
-                         st.subheader(f"Data for Schema: {selected_schema}")
-                         st.info(f"Data extraction for schema '{selected_schema}' is not directly supported by the current pbixray data model object for viewing.")
+                if tables:
+                    schema_details = {}
+                    schema_names = []
+                    for table in tables:
+                        # Assuming table objects have 'name' and 'columns' attributes
+                        if hasattr(table, 'name') and hasattr(table, 'columns'):
+                            schema_details[table.name] = {
+                                "Columns": [{
+                                    "Name": col.name,
+                                    "DataType": col.data_type,
+                                    "isHidden": col.is_hidden,
+                                    "FormatString": col.format_string
+                                } for col in table.columns] if hasattr(table, 'columns') else [],
+                                "Measures": [{
+                                    "Name": measure.name,
+                                    "Expression": measure.expression,
+                                    "isHidden": measure.is_hidden,
+                                    "FormatString": measure.format_string
+                                } for measure in table.measures] if hasattr(table, 'measures') else []
+                            }
+                            schema_names.append(table.name)
+                        else:
+                            st.warning(f"Skipping unexpected table object structure: {type(table)}")
 
+
+                    if schema_names:
+                        st.json(schema_details)
+
+                        # Add selectbox for schema selection
+                        st.subheader("Select a Schema to View Data")
+                        selected_schema = st.selectbox("Choose a schema", ["--Select--"] + schema_names)
+
+                        # Display selected schema data (Still a placeholder due to pbixray limitations)
+                        if selected_schema and selected_schema != "--Select--":
+                             st.subheader(f"Data for Schema: {selected_schema}")
+                             st.info(f"Data extraction for schema '{selected_schema}' is not directly supported by the current pbixray data model object for viewing.")
+                    else:
+                         st.info("No schema names found after processing tables.")
+                else:
+                     st.info("No tables found in the Data Model.")
             else:
-                st.info("Could not extract Data Model details or no tables were found. Ensure the uploaded PBIX file is valid and contains a data model.")
+                st.info("Data Model object is None, cannot extract schema details.")
 
 
             # Display other extracted data (excluding Data Model)
@@ -282,6 +262,7 @@ def main():
             # Add download buttons
             st.sidebar.header("Download Output")
             if extracted_data:
+                # Pass the entire extracted_data to the generators, they can decide what to include
                 excel_output = generate_excel_doc(extracted_data)
                 st.sidebar.download_button(label="Download Data as Excel",
                                         data=excel_output,
