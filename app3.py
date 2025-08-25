@@ -28,15 +28,61 @@ def process_pbix_file(uploaded_file):
             unpacker = pbixray.pbix_unpacker.PbixUnpacker(tmp_file_path)
 
             extracted_data = {}
-            # The pbixray.PbixUnpacker object provides direct attributes for different sections:
-            extracted_data["Metadata"] = unpacker.metadata
-            extracted_data["Schema"] = unpacker.schema
-            extracted_data["Relationships"] = unpacker.relationships
-            extracted_data["Power Query"] = unpacker.power_query
-            extracted_data["M Parameters"] = unpacker.m_parameters
-            extracted_data["DAX Tables"] = unpacker.dax_tables
-            extracted_data["DAX Measures"] = unpacker.dax_measures
-            extracted_data["Data Model"] = unpacker.data_model
+            # Remove lines that access attributes not present on PbixUnpacker
+            # extracted_data["Metadata"] = unpacker.metadata # Removed as it caused AttributeError
+            # extracted_data["Schema"] = unpacker.schema # Removed as it caused AttributeError
+            # extracted_data["Relationships"] = unpacker.relationships # Removed as it caused AttributeError
+            # extracted_data["Power Query"] = unpacker.power_query # Removed as it caused AttributeError
+            # extracted_data["M Parameters"] = unpacker.m_parameters # Removed as it caused AttributeError
+            # extracted_data["DAX Tables"] = unpacker.dax_tables # Removed as it caused AttributeError
+            # extracted_data["DAX Measures"] = unpacker.dax_measures # Removed as it caused AttributeError
+
+            # Access the data_model with error handling
+            try:
+                extracted_data["Data Model"] = unpacker.data_model
+                st.write("Successfully accessed Data Model object (might not contain full model structure).")
+                # Add some debugging info about the data_model structure
+                if extracted_data["Data Model"]:
+                    st.write(f"Type of unpacker.data_model: {type(extracted_data['Data Model'])}")
+                    if hasattr(extracted_data["Data Model"], 'model'):
+                         st.write("Data Model has 'model' attribute.")
+                         if hasattr(extracted_data["Data Model"].model, 'tables'):
+                             st.write("Data Model.model has 'tables' attribute.")
+                             if extracted_data["Data Model"].model.tables:
+                                 st.write(f"Number of tables found: {len(extracted_data['Data Model'].model.tables)}")
+                             else:
+                                st.warning("Data Model.model.tables is empty.")
+                         else:
+                             st.warning("Data Model.model does NOT have 'tables' attribute.")
+                    else:
+                         st.warning("Data Model does NOT have 'model' attribute.")
+                else:
+                     st.warning("unpacker.data_model is None.")
+
+
+            except AttributeError as ae:
+                st.error(f"AttributeError accessing data_model or its attributes: {ae}")
+                extracted_data["Data Model"] = None # Ensure Data Model is None on error
+            except Exception as e:
+                st.error(f"An unexpected error occurred accessing data_model: {e}")
+                extracted_data["Data Model"] = None # Ensure Data Model is None on error
+
+
+            # Extract actual data for tables
+            table_data = {}
+            # Only attempt to process tables if data_model and its components are available
+            if extracted_data["Data Model"] and hasattr(extracted_data["Data Model"], 'tables') and extracted_data["Data Model"].tables: # Corrected access to tables
+                 for table in extracted_data["Data Model"].tables:
+                    try:
+                        # As determined in the previous step, pbixray.data_model does not support
+                        # direct extraction of table data into DataFrames.
+                        # We will store a placeholder indicating this limitation.
+                        table_data[table.name] = pd.DataFrame({"Status": [f"Data extraction for {table.name} not supported by pbixray.data_model for direct viewing."]})
+
+                    except Exception as data_e:
+                        table_data[table.name] = pd.DataFrame({"Error": [f"Could not extract data for {table.name}: {data_e}"]})
+
+            extracted_data["Table Data"] = table_data # Store the extracted (or placeholder) data
 
             st.success("PBIX file processed successfully!")
             return extracted_data
@@ -96,7 +142,6 @@ def generate_excel_doc(data):
     output.seek(0)
     return output
 
-
 def generate_word_doc(data):
     """Generates a Word document from extracted data."""
     document = Document()
@@ -120,7 +165,7 @@ def generate_word_doc(data):
 
 def generate_pdf_doc(data):
     """Generates a PDF document from extracted data."""
-    output = io.Bytes瓯()
+    output = io.BytesIO()
     c = canvas.Canvas(output, pagesize=letter)
     width, height = letter
 
@@ -237,7 +282,6 @@ def main():
             # Add download buttons
             st.sidebar.header("Download Output")
             if extracted_data:
-                # Pass the entire extracted_data to the generators, they can decide what to include
                 excel_output = generate_excel_doc(extracted_data)
                 st.sidebar.download_button(label="Download Data as Excel",
                                         data=excel_output,
