@@ -5,6 +5,3 @@ reportlab
 pandas
 xlsxwriter
 fpdf
-pandas
-traceback
-docx
